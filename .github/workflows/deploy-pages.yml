@@ -1,0 +1,55 @@
+name: Publicar biblioteca virtual
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Obtener el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generar config.js desde GitHub Secrets
+        env:
+          DOCENTE_USUARIO: ${{ secrets.DOCENTE_USUARIO }}
+          DOCENTE_PASSWORD: ${{ secrets.DOCENTE_PASSWORD }}
+          ESTUDIANTE_USUARIO: ${{ secrets.ESTUDIANTE_USUARIO }}
+          ESTUDIANTE_PASSWORD: ${{ secrets.ESTUDIANTE_PASSWORD }}
+        run: node scripts/generar-config.mjs
+
+      - name: Preparar el sitio publicado
+        run: |
+          mkdir dist
+          cp index.html styles.css script.js config.js dist/
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir el sitio
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4

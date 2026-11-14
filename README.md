@@ -1,32 +1,57 @@
-# 📚 Hemeroteca de la I.E. SAN JOSÉ DE PUNO
+# 📚 BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO
 
-Proyecto educativo **full‑stack sin backend**: una biblioteca y aula digital completa
+Proyecto educativo **sin backend**: una biblioteca y aula digital completa
 (HTML + CSS + JavaScript puro) que funciona abriéndola en VS Code y publicándola
 gratis en **GitHub Pages**.
 
-Sin frameworks, sin servidor, sin base de datos, sin dependencias externas
-(ni CDN, ni npm, ni build). Solo **3 archivos**.
+Sin frameworks, sin servidor y sin base de datos externa. La configuración de
+acceso se genera con un pequeño script de Node a partir de variables de entorno.
 
 ---
 
 ## ✨ Funcionalidades
 
-### 🔐 Acceso único
+### 🔐 Acceso por roles (demostración)
 
-Las credenciales del sistema están en **`_admin/credenciales.txt`** (archivo local
-para el desarrollador, no enlazado desde el sitio). En el código solo se guardan
-los hashes SHA-256.
+Hay **dos accesos separados** en la misma pantalla: una pestaña para **docentes**
+y otra para **estudiantes**. Cada rol tiene su propio usuario y contraseña.
 
-Una sola pantalla de inicio de sesión para todos. Después de ingresar se elige el
-**rol** (docente o estudiante) y la interfaz se adapta.
+Las credenciales **no se escriben en el código ni se suben al repositorio**:
 
-### 🔒 Seguridad del inicio de sesión
+1. Copia `.env.example` a `.env`.
+2. Reemplaza los placeholders por credenciales de **demostración**.
+3. Genera `config.js` con:
 
-- Contraseña comparada mediante **hash SHA-256** (`crypto.subtle`), sin texto plano en el JavaScript.
+   ```bash
+   node scripts/generar-config.mjs
+   ```
+
+`config.js` contiene únicamente hashes SHA-256, está en `.gitignore` y se carga
+antes de `script.js`. Si falta, el login muestra un aviso de configuración.
+
+> **Limitación importante:** al ser un sitio 100 % estático, este login es una
+> **maqueta funcional**, no seguridad real. Cualquier persona con acceso al
+> navegador puede leer o modificar el JavaScript, `config.js` y el almacenamiento
+> local. Para autenticación real hace falta un backend con sesiones seguras.
+
+### 🔒 Medidas de disuasión del login
+
+- Contraseñas comparadas mediante **hash SHA-256** (`crypto.subtle`), sin texto plano en el JavaScript.
 - **Bloqueo de 60 segundos** tras **5 intentos fallidos** (persiste al recargar).
-- **Token de sesión** en `sessionStorage`; sin token no se abren las páginas internas.
+- **Token de sesión con rol y caducidad** en `sessionStorage`; sin token válido no se abren las páginas internas.
+- La sesión guardada en `localStorage` solo se acepta si su rol coincide con el token.
 - Sanitización de las entradas y protección básica contra clic derecho / F12 / Ctrl+Shift+I / Ctrl+U.
 - Estas medidas son **disuasorias**: en frontend puro la seguridad real no existe.
+
+### 🗂️ Áreas curriculares y anuncios
+
+- Se muestran las **11 áreas curriculares** con su nombre oficial, sin numeración
+  ni números de página.
+- Cada área tiene un **color propio** y su **propia lista de anuncios**.
+- Los anuncios de un área **no se mezclan** con los de otra ni con el bloque
+  general de anuncios existente.
+- Solo el docente puede publicar o eliminar anuncios de área (la configuración de
+  permisos de estudiantes se mantiene igual que en los anuncios generales).
 
 ### 👨‍🏫 Rol DOCENTE
 
@@ -34,6 +59,7 @@ Una sola pantalla de inicio de sesión para todos. Después de ingresar se elige
   **editar** los datos (y reemplazar el archivo) y **eliminar**.
 - **Tareas**: publicar actividades para el curso o subir entregas.
 - **Anuncios**: crear comunicados para todo el grupo.
+- **Áreas curriculares**: publicar anuncios en el espacio independiente de cada área.
 - **Fotos**: subir una o varias imágenes a la vez y eliminarlas.
 - **Museos Virtuales**: agregar enlaces (URL) a museos y recorridos virtuales.
 - **Ajustes**: nombre de la institución, curso, límite de tamaño, permisos y respaldo.
@@ -44,6 +70,7 @@ Una sola pantalla de inicio de sesión para todos. Después de ingresar se elige
 - **Subir sus tareas** en formato **foto, Word o PDF**.
 - **Ver y usar** los museos virtuales.
 - **Ver** los anuncios del docente.
+- **Ver** los anuncios de cada área curricular en su espacio correspondiente.
 - ❌ **No puede** editar ni eliminar nada.
 
 > Por defecto el estudiante **no** puede borrar nada. Si lo prefieres, el docente
@@ -65,31 +92,49 @@ Una sola pantalla de inicio de sesión para todos. Después de ingresar se elige
 
 ```
 hemeroteca-oficial/
-├── index.html    ← Estructura de la página
-├── styles.css    ← Estilos, temas claro/oscuro y diseño responsive
-├── script.js     ← Toda la lógica de la aplicación
-├── _admin/       ← Solo desarrollador (credenciales en texto plano)
-└── README.md     ← Este archivo
+├── index.html              ← Estructura de la página
+├── styles.css              ← Estilos, temas claro/oscuro y diseño responsive
+├── script.js               ← Toda la lógica de la aplicación
+├── config.js               ← Generado desde .env (hashes; no se sube)
+├── .env.example            ← Plantilla de variables de entorno
+├── scripts/
+│   └── generar-config.mjs  ← Genera config.js sin exponer contraseñas
+├── .github/workflows/
+│   └── deploy-pages.yml    ← Publicación opcional en GitHub Pages
+├── _admin/                 ← Solo desarrollador (no se sube)
+└── README.md               ← Este archivo
 ```
 
 ---
 
 ## 🚀 Abrir en VS Code y ejecutar
 
-### 1. Abrir el proyecto
+### 1. Generar la configuración de acceso
+
+1. Copia `.env.example` y renómbralo a `.env`.
+2. Escribe un usuario y una contraseña de **demostración** para docente y otro par para estudiante.
+3. Desde la terminal del proyecto ejecuta:
+
+   ```bash
+   node scripts/generar-config.mjs
+   ```
+
+   Se creará `config.js` con los hashes. No contiene contraseñas en texto plano.
+
+### 2. Abrir el proyecto
 
 1. Abre **Visual Studio Code**.
 2. Menú **Archivo → Abrir carpeta…**
 3. Selecciona la carpeta `hemeroteca oficial`.
-4. Verás los 4 archivos en el explorador lateral.
+4. Verás los archivos del proyecto en el explorador lateral.
 
-### 2. Instalar la extensión *Live Server*
+### 3. Instalar la extensión *Live Server*
 
 1. En la barra lateral izquierda haz clic en **Extensiones** (icono de cuadros).
 2. Busca **Live Server** (autor *Ritwick Dey*).
 3. Haz clic en **Instalar**.
 
-### 3. Ejecutar
+### 4. Ejecutar
 
 1. Abre `index.html`.
 2. Clic derecho sobre `index.html` → **Open with Live Server**.
@@ -100,7 +145,7 @@ hemeroteca-oficial/
 > Si abres `index.html` con doble clic (`file:///`), algunos navegadores
 > bloquean el almacenamiento local y los datos **no se guardarán**.
 
-### 4. Detener el servidor
+### 5. Detener el servidor
 
 Cierra la pestaña del navegador o pulsa **Ctrl + Shift + P → Live Server: Stop Server**
 en VS Code.
@@ -109,11 +154,17 @@ en VS Code.
 
 ## 🔑 Iniciar sesión
 
-Consulta el usuario y la contraseña en **`_admin/credenciales.txt`** (uso exclusivo
-del desarrollador). Luego selecciona: **Soy docente** o **Soy estudiante**.
+1. Elige la pestaña **Docente** o **Estudiante**.
+2. Escribe el usuario y la contraseña de demostración que definiste en `.env`.
+3. Pulsa **Ingresar**.
+
+- El **docente** puede publicar libros, tareas, anuncios, fotos, museos y anuncios por área.
+- El **estudiante** solo puede consultar el material y subir sus tareas.
+- El botón **Cerrar sesión** borra el token y vuelve a la pantalla de acceso.
 
 > Tras **5 intentos fallidos**, el acceso se bloquea durante **60 segundos**.
 > El bloqueo se guarda en el navegador y se mantiene aunque recargues la página.
+> Este login es una **demostración**: no sustituye una autenticación real.
 
 ---
 
@@ -133,7 +184,7 @@ Desde la terminal, dentro de la carpeta del proyecto:
 ```bash
 git init
 git add .
-git commit -m "Hemeroteca de la I.E. SAN JOSÉ DE PUNO"
+git commit -m "BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO"
 git branch -M main
 git remote add origin https://github.com/TU_USUARIO/hemeroteca-oficial.git
 git push -u origin main
@@ -142,12 +193,27 @@ git push -u origin main
 > Si no tienes Git instalado, puedes subir los archivos arrastrándolos a la web de GitHub
 > (botón **Add file → Upload files**).
 
-### Paso 3 — Activar GitHub Pages
+### Paso 3 — Configurar los secretos y activar GitHub Pages
 
-1. En tu repositorio ve a **Settings → Pages**.
-2. En **Source**, elige **Deploy from a branch**.
-3. En **Branch**, selecciona **main** y la carpeta **/(root)**.
-4. Clic en **Save**.
+`config.js` no se sube al repositorio. El workflow incluido lo genera durante la
+publicación usando **GitHub Secrets**:
+
+1. En el repositorio ve a **Settings → Secrets and variables → Actions**.
+2. Crea estos secretos (valores de demostración, nunca reales):
+   - `DOCENTE_USUARIO`
+   - `DOCENTE_PASSWORD`
+   - `ESTUDIANTE_USUARIO`
+   - `ESTUDIANTE_PASSWORD`
+3. Ve a **Settings → Pages**.
+4. En **Source**, elige **GitHub Actions**.
+5. Haz push a `main` (o ejecuta el workflow manualmente desde **Actions**).
+
+El workflow `.github/workflows/deploy-pages.yml` genera `config.js` y publica el
+sitio sin exponer las contraseñas.
+
+> Si usas otra plataforma (Netlify, Vercel, servidor propio), configura esas cuatro
+> variables en el panel de la plataforma y ejecuta `node scripts/generar-config.mjs`
+> como paso de build antes de publicar.
 
 ### Paso 4 — Obtener tu dirección
 
@@ -173,7 +239,7 @@ La aplicación usa **dos almacenes del navegador**, ambos 100 % locales y gratui
 
 | Dato | Dónde se guarda | Detalle |
 |---|---|---|
-| Libros, tareas, anuncios, fotos, museos, sesión y ajustes | **`localStorage`** | Claves `hemeroteca_libros`, `hemeroteca_tareas`, `hemeroteca_avisos`, `hemeroteca_fotos`, `hemeroteca_museos`, `hemeroteca_sesion`, `hemeroteca_config`, `hemeroteca_bloqueo` |
+| Libros, tareas, anuncios, anuncios por área, fotos, museos, sesión y ajustes | **`localStorage`** | Claves `hemeroteca_libros`, `hemeroteca_tareas`, `hemeroteca_avisos`, `hemeroteca_avisos_areas`, `hemeroteca_fotos`, `hemeroteca_museos`, `hemeroteca_sesion`, `hemeroteca_config`, `hemeroteca_bloqueo` |
 | Token de sesión | **`sessionStorage`** | Clave `hemeroteca_token` (se borra al cerrar sesión o la pestaña) |
 | Archivos binarios (Word, PDF, imágenes) | **`IndexedDB`** | Base `hemeroteca_archivos`, almacén `archivos` |
 
@@ -217,26 +283,26 @@ y la importa en el equipo de cada aula.
 
 ## ⚙️ Personalización rápida
 
-### Cambiar usuario y contraseña
+### Cambiar usuarios y contraseñas
 
-Las credenciales en texto plano viven solo en `_admin/credenciales.txt`. El frontend
-compara hashes SHA-256 definidos al inicio de `script.js`:
+Las credenciales se definen en `.env` (archivo local, ignorado por Git):
 
-```js
-var USUARIO_OBJETIVO = 'admin';
-var HASH_USUARIO_OBJETIVO = '8c6976...';
-var HASH_PASSWORD_OBJETIVO = 'a5f639...';
+```env
+DOCENTE_USUARIO=tu_usuario_docente
+DOCENTE_PASSWORD=tu_contrasena_docente
+ESTUDIANTE_USUARIO=tu_usuario_estudiante
+ESTUDIANTE_PASSWORD=tu_contrasena_estudiante
 ```
 
-Para cambiar la contraseña, calcula su hash SHA-256 y reemplaza
-`HASH_PASSWORD_OBJETIVO`. Puedes usar la consola del navegador:
+Después de cambiarlas, regenera la configuración:
 
-```js
-crypto.subtle.digest('SHA-256', new TextEncoder().encode('NUEVA_CONTRASEÑA'))
-  .then(b => console.log([...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('')));
+```bash
+node scripts/generar-config.mjs
 ```
 
-Recuerda actualizar también `_admin/credenciales.txt`.
+`config.js` se reescribe con los nuevos hashes SHA-256. **No edites `config.js`
+a mano ni lo subas al repositorio.** En GitHub Pages, actualiza los secretos del
+repositorio y vuelve a ejecutar el workflow.
 
 ### Cambiar colores
 
@@ -273,21 +339,39 @@ El archivo está organizado en secciones numeradas para que sea fácil de leer:
 
 | Sección | Contenido |
 |---|---|
-| 1 | Configuración (credenciales, roles, extensiones permitidas) |
+| 1 | Configuración (roles y carga de `config.js`, extensiones permitidas) |
 | 2–3 | Utilidades y notificaciones (toasts) |
 | 4–5 | Almacenamiento: `localStorage` e `IndexedDB` |
 | 6–7 | Estado de la aplicación y persistencia |
-| 8 | Pantalla de inicio de sesión |
+| 8 | Pantalla de inicio de sesión por rol |
 | 9–10 | Navegación y temas |
 | 11 | Zonas de arrastrar y soltar |
 | 12 | Modales y barra de progreso |
 | **13** | **Lector ZIP + conversor DOCX a HTML (sin dependencias)** |
 | 14 | Visor de archivos (PDF, imágenes, Word) |
-| 15–22 | Renderizado de cada sección |
+| 15–22 | Renderizado de cada sección (incluye áreas y sus anuncios) |
 | 23 | Renderizado general |
-| 24–29 | Acciones (libros, tareas, anuncios, fotos, museos, ajustes) |
+| 24–29 | Acciones (libros, tareas, anuncios, áreas, fotos, museos, ajustes) |
 | 30 | Atajos de teclado y eventos globales |
 | 31 | Arranque |
+
+---
+
+## 🔐 Limitaciones de seguridad del sitio estático
+
+Este proyecto **no tiene backend**, por lo que el login es una **maqueta funcional**:
+
+- Las credenciales se comparan en el navegador; cualquiera puede leer `script.js`,
+  `config.js` y el almacenamiento local, o modificar el JavaScript.
+- Los hashes SHA-256 evitan guardar contraseñas en texto plano, pero **no impiden**
+  que alguien con acceso al equipo o a las herramientas del navegador altere la sesión.
+- El bloqueo de intentos y la ocultación de secciones son **disuasorios**, no controles
+  de seguridad.
+- Los datos (libros, tareas, anuncios) son locales a cada navegador y no se sincronizan.
+- Para autenticación y permisos reales se necesita un backend con sesiones seguras,
+  validación en servidor y una base de datos.
+
+No uses contraseñas personales, institucionales o reales en este proyecto.
 
 ---
 
@@ -303,8 +387,13 @@ Sí, pero **solo en el mismo navegador**. Como no hay servidor, cada equipo tien
 propia copia. Usa *Exportar / Importar* para repartir el material.
 
 **¿Puedo cambiar las credenciales?**
-Sí. Sustituye los hashes SHA-256 al inicio de `script.js` (ver *Personalización*)
-y actualiza `_admin/credenciales.txt`. No se borra ningún dato de la hemeroteca.
+Sí. Edita `.env`, ejecuta `node scripts/generar-config.mjs` y, si publicas en
+GitHub Pages, actualiza los secretos del repositorio. No se borra ningún dato de
+la biblioteca. Recuerda que el login es una demostración, no seguridad real.
+
+**¿Por qué el login dice que falta `config.js`?**
+Porque las credenciales se generan desde `.env`. Copia `.env.example` a `.env`,
+completa los valores de demostración y ejecuta `node scripts/generar-config.mjs`.
 
 **¿Por qué no se guardan mis datos al abrir el archivo con doble clic?**
 Porque en `file:///` algunos navegadores bloquean el almacenamiento. Usa **Live Server**

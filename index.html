@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#4f46e5">
-<meta name="description" content="Hemeroteca de la I.E. SAN JOSÉ DE PUNO: biblioteca digital para docentes y estudiantes con libros, tareas, anuncios, fotos y museos virtuales.">
-<title>Hemeroteca de la I.E. SAN JOSÉ DE PUNO</title>
+<meta name="description" content="BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO: biblioteca digital para docentes y estudiantes con libros, tareas, anuncios, fotos y museos virtuales.">
+<title>BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%234f46e5'/><text x='32' y='46' font-size='32' font-family='Arial' font-weight='bold' fill='%23ffffff' text-anchor='middle'>H</text></svg>">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -24,9 +24,21 @@
   <div class="login-card" role="region" aria-labelledby="loginTitulo">
     <div class="login-brand">
       <div class="login-logo" aria-hidden="true">&#128218;</div>
-      <h1 id="loginTitulo">Hemeroteca de la I.E. SAN JOSÉ DE PUNO</h1>
+      <h1 id="loginTitulo">BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO</h1>
       <p class="login-sub">Tu biblioteca y aula digital</p>
     </div>
+
+    <div class="login-roles" role="tablist" aria-label="Selecciona tu rol">
+      <button type="button" class="login-rol activo" id="rolDocente" role="tab"
+              aria-selected="true" aria-controls="loginForm" data-login-rol="docente">
+        <span aria-hidden="true">&#128104;&#8205;&#127979;</span> Docente
+      </button>
+      <button type="button" class="login-rol" id="rolEstudiante" role="tab"
+              aria-selected="false" aria-controls="loginForm" data-login-rol="estudiante">
+        <span aria-hidden="true">&#127891;</span> Estudiante
+      </button>
+    </div>
+    <p class="login-rol-nota" id="loginRolNota">Ingresa con tu cuenta de docente.</p>
 
     <form id="loginForm" class="login-form" autocomplete="on" novalidate>
       <label class="campo" for="loginUsuario">
@@ -71,8 +83,8 @@
     <div class="sidebar-brand">
       <span class="sidebar-logo" aria-hidden="true">&#128218;</span>
       <div class="sidebar-titulo">
-        <strong id="marcaNombre">Hemeroteca</strong>
-        <small>de la I.E. SAN JOSÉ DE PUNO</small>
+        <strong id="marcaNombre">BIBLIOTECA VIRTUAL</strong>
+        <small>DE LA I.E.S. SAN JOSÉ DE PUNO</small>
       </div>
       <button type="button" class="btn-icono sidebar-cerrar" id="cerrarSidebar" aria-label="Cerrar men&uacute;">&#10005;</button>
     </div>
@@ -89,6 +101,11 @@
       <button type="button" class="nav-item activo" data-seccion="inicio">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6V11h-6v9Zm0-16v5h6V4h-6Z"/></svg>
         <span>Inicio</span>
+      </button>
+      <button type="button" class="nav-item" data-seccion="areas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/></svg>
+        <span>&Aacute;reas curriculares</span>
+        <em class="nav-badge" id="badgeAreas">0</em>
       </button>
       <button type="button" class="nav-item" data-seccion="libros">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h11a3 3 0 0 1 3 3v17l-4.5-2.5L12 22l-3.5-2.5L4 22V5a3 3 0 0 1 3-3Zm0 2a1 1 0 0 0-1 1v14.9l2.5-1.4a1 1 0 0 1 1 0L12 20.9l3.5-2.4a1 1 0 0 1 1 0l2.5 1.4V5a1 1 0 0 0-1-1H6Z"/></svg>
@@ -190,6 +207,12 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <!-- ====== ÁREAS CURRICULARES ====== -->
+      <section class="seccion" id="sec-areas">
+        <p class="areas-intro">Cada &aacute;rea curricular tiene su propio espacio de anuncios. Los comunicados de un &aacute;rea no se mezclan con los de otra.</p>
+        <div class="grid grid-areas" id="gridAreas"></div>
       </section>
 
       <!-- ====== LIBROS ====== -->
@@ -404,7 +427,7 @@
             <form id="formConfig" class="form-cols">
               <label class="campo" for="cfgNombre">
                 <span class="campo-label">Nombre de la instituci&oacute;n</span>
-                <input type="text" id="cfgNombre" class="input" maxlength="60" placeholder="Hemeroteca">
+                <input type="text" id="cfgNombre" class="input" maxlength="60" placeholder="BIBLIOTECA VIRTUAL">
               </label>
               <label class="campo" for="cfgCurso">
                 <span class="campo-label">Curso / Nivel</span>
@@ -486,7 +509,7 @@
     </main>
 
     <footer class="foot">
-      <span id="footTexto">Hemeroteca de la I.E. SAN JOSÉ DE PUNO</span>
+      <span id="footTexto">BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO</span>
       <span class="foot-sep">&middot;</span>
       <span>Datos guardados localmente en este navegador</span>
     </footer>
@@ -576,11 +599,10 @@
 <!-- Notificaciones -->
 <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
 
+<!-- Socket.IO es opcional: script.js funciona aunque el CDN o el backend no estén disponibles. -->
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<!-- Configuración generada desde .env: solo hashes, nunca contraseñas en texto plano. -->
+<script src="config.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
-578: 
-579:     <!-- Conectar al backend en tiempo real -->
-580:     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-581:     <script src="script.js"></script>
-582: </body>

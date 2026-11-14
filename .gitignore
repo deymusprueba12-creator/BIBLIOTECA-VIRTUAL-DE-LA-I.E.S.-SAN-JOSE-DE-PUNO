@@ -1,3 +1,12 @@
-# Carpeta privada del desarrollador: credenciales en texto plano.
-# No debe subirse a GitHub ni publicarse con GitHub Pages.
+# Carpeta privada del desarrollador: no debe subirse a GitHub.
 _admin/
+
+# Variables de entorno y configuración generada (contienen hashes de acceso).
+.env
+.env.local
+config.js
+
+# Dependencias y artefactos habituales.
+node_modules/
+.DS_Store
+Thumbs.db

@@ -1,15 +1,19 @@
-// LÍNEA 1
-const URL_BACKEND = 'https://hemeroteca-backend.onrender.com';
-const socket = io(URL_BACKEND);
+/* Integración opcional con el backend en tiempo real.
+   Si Socket.IO no está disponible, la aplicación sigue funcionando. */
+(function () {
+  var URL_BACKEND = 'https://hemeroteca-backend.onrender.com';
+  if (typeof io !== 'function') return;
+  try {
+    var socket = io(URL_BACKEND);
+    socket.on('nuevo-libro', function (libro) {
+      console.log('Nuevo libro recibido en tiempo real:', libro);
+      alert('El docente acaba de subir el libro: ' + libro.titulo + '!');
+    });
+  } catch (e) { /* backend no disponible */ }
+})();
 
-// Escuchar si alguien más sube un libro (Tiempo real)
-socket.on('nuevo-libro', (libro) => {
-    console.log('¡Nuevo libro recibido en tiempo real!', libro);
-    // Aquí puedes poner tu función que actualiza la lista visual en pantalla, por ejemplo:
-    // renderizarLibros(); 
-    alert('¡El docente acaba de subir el libro: ' + libro.titulo + '!');
-});/* =====================================================================
-   HEMEROTECA DE LA I.E. SAN JOSÉ DE PUNO — Lógica de la aplicación
+/* =====================================================================
+   BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO — Lógica de la aplicación
    HTML + CSS + JavaScript puro. Sin frameworks, sin backend, sin CDN.
 
    Almacenamiento:
@@ -23,15 +27,14 @@ socket.on('nuevo-libro', (libro) => {
    1. CONFIGURACIÓN
    ===================================================================== */
 
-/* Credenciales: solo se guardan hashes SHA-256 en hexadecimal.
-   El texto plano de la contraseña no existe en el código del frontend. */
-var USUARIO_OBJETIVO = 'admin';
-var HASH_USUARIO_OBJETIVO = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
-var HASH_PASSWORD_OBJETIVO = 'a5f6391a182488530de2944e0047842d05f1ad151594f253082bc58819255ed6';
-/* Respaldo solo para navegadores sin crypto.subtle (contexto no seguro) */
-var HASH_RESPALDO_USUARIO = 'b7d9cdce219b13c9';
-var HASH_RESPALDO_PASSWORD = 'b587d51ef2e1308c';
+/* Las credenciales NO viven en este archivo. config.js se genera desde .env
+   o desde variables del entorno (GitHub Secrets) y contiene solo hashes.
+   Si falta config.js, el login muestra un aviso de configuración. */
+var AUTH = (typeof window !== 'undefined' && window.HEMEROTECA_AUTH) || null;
 var ROLES = Object.freeze({ DOCENTE: 'docente', ESTUDIANTE: 'estudiante' });
+var NOMBRE_APP = 'BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO';
+var DURACION_TOKEN_MS = 8 * 60 * 60 * 1000;
+var rolLoginActual = ROLES.DOCENTE;
 
 /** Seguridad del login: bloqueo temporal tras varios intentos fallidos */
 var LIMITE_INTENTOS = 5;
@@ -57,6 +60,7 @@ var CLAVES = {
   libros: 'hemeroteca_libros',
   tareas: 'hemeroteca_tareas',
   avisos: 'hemeroteca_avisos',
+  avisosAreas: 'hemeroteca_avisos_areas',
   fotos: 'hemeroteca_fotos',
   museos: 'hemeroteca_museos',
   sesion: 'hemeroteca_sesion',
@@ -69,6 +73,7 @@ var CLAVES = {
 
 var SECCIONES = {
   inicio:  { titulo: 'Inicio',            sub: 'Resumen de la hemeroteca' },
+  areas:   { titulo: 'Áreas curriculares', sub: 'Anuncios organizados por área' },
   libros:  { titulo: 'Libros',            sub: 'Material de lectura del curso' },
   tareas:  { titulo: 'Tareas',            sub: 'Actividades y entregas' },
   anuncios: { titulo: 'Anuncios',         sub: 'Comunicados del docente' },
@@ -76,6 +81,22 @@ var SECCIONES = {
   museos:  { titulo: 'Museos Virtuales',  sub: 'Recorridos y enlaces culturales' },
   ajustes: { titulo: 'Ajustes',           sub: 'Configuración y respaldo' }
 };
+
+/* Áreas curriculares: solo nombres, sin numeración ni páginas.
+   Cada área guarda sus anuncios en una lista independiente. */
+var AREAS = Object.freeze([
+  { id: 'dpcc',        nombre: 'Área de Desarrollo Personal, Ciudadanía y Cívica', color: '#1E88E5' },
+  { id: 'ccss',        nombre: 'Área de Ciencias Sociales',                        color: '#43A047' },
+  { id: 'efisica',     nombre: 'Área de Educación Física',                          color: '#F4511E' },
+  { id: 'arte',        nombre: 'Área de Arte y Cultura',                            color: '#8E24AA' },
+  { id: 'comunicacion',nombre: 'Área de Comunicación',                              color: '#E53935' },
+  { id: 'castellano',  nombre: 'Área de Castellano como Segunda Lengua',            color: '#00ACC1' },
+  { id: 'ingles',      nombre: 'Área de Inglés como Lengua Extranjera',             color: '#3949AB' },
+  { id: 'matematica',  nombre: 'Área de Matemática',                                color: '#FB8C00' },
+  { id: 'cyt',         nombre: 'Área de Ciencia y Tecnología',                      color: '#00897B' },
+  { id: 'ept',         nombre: 'Área de Educación para el Trabajo',                 color: '#6D4C41' },
+  { id: 'religiosa',   nombre: 'Área de Educación Religiosa',                       color: '#D81B60' }
+]);
 
 /* =====================================================================
    2. UTILIDADES GENERALES
@@ -131,16 +152,25 @@ function hashRespaldo(cadena) {
   return ('00000000' + (h2 >>> 0).toString(16)).slice(-8) + ('00000000' + (h1 >>> 0).toString(16)).slice(-8);
 }
 
-/** Compara las credenciales escritas contra los hashes guardados. */
-function credencialesCorrectas(usuario, password) {
+/** Comprueba si config.js existe y tiene las dos credenciales. */
+function authConfigurada() {
+  return !!(AUTH && AUTH.docente && AUTH.estudiante);
+}
+
+/** Compara las credenciales escritas contra los hashes del rol indicado. */
+function credencialesCorrectas(rol, usuario, password) {
+  var datos = AUTH && AUTH[rol];
+  if (!datos) return Promise.resolve(false);
+
   function porRespaldo() {
-    return hashRespaldo(usuario) === HASH_RESPALDO_USUARIO &&
-           hashRespaldo(password) === HASH_RESPALDO_PASSWORD;
+    return hashRespaldo(usuario) === datos.usuarioRespaldo &&
+           hashRespaldo(password) === datos.passwordRespaldo;
   }
+
   try {
     if (window.crypto && window.crypto.subtle && typeof window.TextEncoder !== 'undefined') {
       return Promise.all([hashSha256(usuario), hashSha256(password)]).then(function (hashes) {
-        return hashes[0] === HASH_USUARIO_OBJETIVO && hashes[1] === HASH_PASSWORD_OBJETIVO;
+        return hashes[0] === datos.usuarioHash && hashes[1] === datos.passwordHash;
       }).catch(function () {
         return porRespaldo();
       });
@@ -149,14 +179,30 @@ function credencialesCorrectas(usuario, password) {
   return Promise.resolve(porRespaldo());
 }
 
-/* --- Token de sesión simple en sessionStorage --- */
-function tokenSesionValido() {
-  try { return !!sessionStorage.getItem(CLAVES.token); } catch (e) { return false; }
+/* --- Token de sesión con rol y caducidad en sessionStorage --- */
+function leerTokenSesion() {
+  try {
+    var bruto = sessionStorage.getItem(CLAVES.token);
+    if (!bruto) return null;
+    var datos = JSON.parse(bruto);
+    if (!datos || !datos.rol || !datos.exp) return null;
+    return datos;
+  } catch (e) {
+    return null;
+  }
 }
 
-function crearTokenSesion() {
-  var token = uid();
-  try { sessionStorage.setItem(CLAVES.token, token); } catch (e) { /* sin sessionStorage */ }
+function tokenSesionValido(rol) {
+  var datos = leerTokenSesion();
+  if (!datos) return false;
+  if (Date.now() >= Number(datos.exp)) return false;
+  if (rol && datos.rol !== rol) return false;
+  return true;
+}
+
+function crearTokenSesion(rol) {
+  var token = { rol: rol, nonce: uid(), exp: Date.now() + DURACION_TOKEN_MS };
+  try { sessionStorage.setItem(CLAVES.token, JSON.stringify(token)); } catch (e) { /* sin sessionStorage */ }
   return token;
 }
 
@@ -405,7 +451,7 @@ function escribirClave(clave, valor) {
 
 function configPorDefecto() {
   return {
-    nombre: 'Hemeroteca de la I.E. SAN JOSÉ DE PUNO',
+    nombre: NOMBRE_APP,
     curso: '',
     limite: LIMITE_POR_DEFECTO,
     borrarTareaEstudiante: false,
@@ -532,6 +578,7 @@ var estado = {
   libros: [],
   tareas: [],
   avisos: [],
+  avisosAreas: {},
   fotos: [],
   museos: [],
   seccion: 'inicio',
@@ -554,6 +601,7 @@ function nombreUsuario() {
 function guardarLibros() { escribirClave(CLAVES.libros, estado.libros); }
 function guardarTareas() { escribirClave(CLAVES.tareas, estado.tareas); }
 function guardarAvisos() { escribirClave(CLAVES.avisos, estado.avisos); }
+function guardarAvisosAreas() { escribirClave(CLAVES.avisosAreas, estado.avisosAreas); }
 function guardarFotos()  { escribirClave(CLAVES.fotos, estado.fotos); }
 function guardarMuseos() { escribirClave(CLAVES.museos, estado.museos); }
 
@@ -561,12 +609,16 @@ function cargarTodo() {
   estado.libros = leerClave(CLAVES.libros, []);
   estado.tareas = leerClave(CLAVES.tareas, []);
   estado.avisos = leerClave(CLAVES.avisos, []);
+  estado.avisosAreas = leerClave(CLAVES.avisosAreas, {});
   estado.fotos  = leerClave(CLAVES.fotos, []);
   estado.museos = leerClave(CLAVES.museos, []);
 
   [estado.libros, estado.tareas, estado.avisos, estado.fotos, estado.museos].forEach(function (lista) {
     if (!Array.isArray(lista)) lista.length = 0;
   });
+  if (!estado.avisosAreas || typeof estado.avisosAreas !== 'object' || Array.isArray(estado.avisosAreas)) {
+    estado.avisosAreas = {};
+  }
   estado.config = cargarConfig();
 }
 
@@ -578,6 +630,9 @@ function mostrarLogin(mensaje) {
   $('#appScreen').classList.add('oculto');
   $('#loginScreen').classList.remove('oculto');
   document.body.dataset.rol = '';
+  if (!mensaje && !authConfigurada()) {
+    mensaje = 'Falta config.js. Ejecuta "node scripts/generar-config.mjs" para generar las credenciales de demostración.';
+  }
   if (!mensaje && BLOQUEO.activo && Date.now() < BLOQUEO.hasta) {
     mensaje = 'Acceso bloqueado por ' + Math.max(0, Math.ceil((BLOQUEO.hasta - Date.now()) / 1000)) + ' segundos por demasiados intentos fallidos.';
   }
@@ -589,9 +644,30 @@ function mostrarLogin(mensaje) {
   if (p) { p.value = ''; setTimeout(function () { u.focus(); }, 120); }
 }
 
+/** Cambia la pestaña de acceso (docente / estudiante) y sus textos. */
+function actualizarRolLogin(rol) {
+  rolLoginActual = rol === ROLES.ESTUDIANTE ? ROLES.ESTUDIANTE : ROLES.DOCENTE;
+  $$('.login-rol').forEach(function (boton) {
+    var activo = boton.getAttribute('data-login-rol') === rolLoginActual;
+    boton.classList.toggle('activo', activo);
+    boton.setAttribute('aria-selected', activo ? 'true' : 'false');
+    boton.setAttribute('tabindex', activo ? '0' : '-1');
+  });
+  var nota = $('#loginRolNota');
+  if (nota) {
+    nota.textContent = rolLoginActual === ROLES.DOCENTE
+      ? 'Ingresa con tu cuenta de docente.'
+      : 'Ingresa con tu cuenta de estudiante.';
+  }
+  var usuario = $('#loginUsuario');
+  if (usuario) {
+    usuario.placeholder = rolLoginActual === ROLES.DOCENTE ? 'Usuario docente' : 'Usuario estudiante';
+  }
+}
+
 function irAApp() {
-  // Verificación del token de sesión antes de abrir las páginas internas
-  if (!tokenSesionValido()) {
+  // Verificación del token de sesión y del rol antes de abrir las páginas internas
+  if (!estado.sesion || !tokenSesionValido(estado.sesion.rol)) {
     cerrarSesion();
     mostrarLogin('Debes iniciar sesión para continuar.');
     return;
@@ -611,11 +687,11 @@ function aplicarRolEnUI() {
   document.body.dataset.rol = rol;
   var nombre = nombreUsuario();
   $('#nombreSesion').textContent = esDocente() ? 'Docente' : 'Estudiante';
-  $('#usuarioSesion').textContent = nombre;
+  $('#usuarioSesion').textContent = (estado.sesion && estado.sesion.usuario) || nombre;
   $('#avatarInicial').textContent = (nombre.charAt(0) || '?').toUpperCase();
   $('#avatarInicial').classList.toggle('estudiante', !esDocente());
-  $('#marcaNombre').textContent = estado.config.nombre || 'Hemeroteca de la I.E. SAN JOSÉ DE PUNO';
-  $('#footTexto').textContent = (estado.config.nombre || 'Hemeroteca de la I.E. SAN JOSÉ DE PUNO') + (estado.config.curso ? ' · ' + estado.config.curso : '');
+  $('#marcaNombre').textContent = estado.config.nombre || NOMBRE_APP;
+  $('#footTexto').textContent = (estado.config.nombre || NOMBRE_APP) + (estado.config.curso ? ' · ' + estado.config.curso : '');
   $('#tituloSubirTarea').textContent = esDocente() ? 'Publicar tarea o subir entrega' : 'Subir mi tarea';
   if ($('#tareaAutor') && !esDocente()) $('#tareaAutor').value = nombreUsuario();
 }
@@ -634,6 +710,18 @@ function configurarLogin() {
     inputPassword.focus();
   });
 
+  // Pestañas de acceso: docente o estudiante
+  $$('.login-rol').forEach(function (boton) {
+    boton.addEventListener('click', function () {
+      actualizarRolLogin(boton.getAttribute('data-login-rol'));
+      error.textContent = '';
+      error.classList.remove('visible');
+      inputPassword.value = '';
+      inputUsuario.focus();
+    });
+  });
+  actualizarRolLogin(ROLES.DOCENTE);
+
   function bloqueado() { return BLOQUEO.activo && Date.now() < BLOQUEO.hasta; }
   function segundosDeBloqueo() { return Math.max(0, Math.ceil((BLOQUEO.hasta - Date.now()) / 1000)); }
 
@@ -650,6 +738,11 @@ function configurarLogin() {
       return;
     }
 
+    if (!authConfigurada()) {
+      mostrarErrorLogin('Falta config.js. Ejecuta "node scripts/generar-config.mjs" para generar las credenciales de demostración.');
+      return;
+    }
+
     // Sanitiza las entradas antes de compararlas (evita inyección de HTML)
     var u = sanitizar(inputUsuario.value);
     var p = sanitizar(inputPassword.value);
@@ -658,7 +751,7 @@ function configurarLogin() {
       return;
     }
 
-    credencialesCorrectas(u, p).then(function (ok) {
+    credencialesCorrectas(rolLoginActual, u, p).then(function (ok) {
       if (!ok) {
         intentosFallidos += 1;
         if (intentosFallidos >= LIMITE_INTENTOS) {
@@ -683,21 +776,18 @@ function configurarLogin() {
       guardarEstadoBloqueo();
       mostrarErrorLogin('');
 
-      // Sesión temporal: se pide el rol
-      estado.sesion = null;
-      elegirRol().then(function (rol) {
-        var token = crearTokenSesion();
-        estado.sesion = {
-          rol: rol,
-          usuario: USUARIO_OBJETIVO,
-          nombre: rol === ROLES.DOCENTE ? 'Docente' : (leerClave(CLAVES.perfil, {}).nombre || 'Estudiante'),
-          fecha: ahora(),
-          token: token
-        };
-        escribirClave(CLAVES.sesion, estado.sesion);
-        irAApp();
-        toast('¡Bienvenido, ' + nombreUsuario() + '!', 'ok');
-      });
+      var rol = rolLoginActual;
+      var token = crearTokenSesion(rol);
+      estado.sesion = {
+        rol: rol,
+        usuario: u,
+        nombre: rol === ROLES.DOCENTE ? 'Docente' : (leerClave(CLAVES.perfil, {}).nombre || 'Estudiante'),
+        fecha: ahora(),
+        token: token.nonce
+      };
+      escribirClave(CLAVES.sesion, estado.sesion);
+      irAApp();
+      toast('¡Bienvenido, ' + (rol === ROLES.DOCENTE ? 'Docente' : 'Estudiante') + '!', 'ok');
     });
   }
 
@@ -711,6 +801,7 @@ function configurarLogin() {
     BLOQUEO.hasta = 0;
     intentosFallidos = 0;
     guardarEstadoBloqueo();
+    actualizarRolLogin(ROLES.DOCENTE);
     cerrarTodosLosModales();
     mostrarLogin('');
     toast('Sesión cerrada correctamente.', 'ok');
@@ -768,17 +859,6 @@ function cerrarConfirmar(valor) {
   var modal = $('#modalConfirmar');
   modal.setAttribute('hidden', '');
   if (dialogo._resolver) { dialogo._resolver(valor); dialogo._resolver = null; }
-}
-
-function elegirRol() {
-  return dialogo({
-    icono: '🎭',
-    titulo: 'Elige cómo quieres entrar',
-    texto: 'Las credenciales son las mismas para todos. Selecciona tu rol para ver las herramientas correspondientes.',
-    okTexto: '👨‍🏫 Soy docente',
-    cancelTexto: '🎓 Soy estudiante',
-    okSecundario: true
-  }).then(function (ok) { return ok ? ROLES.DOCENTE : ROLES.ESTUDIANTE; });
 }
 
 function confirmar(titulo, texto, okTexto, peligro) {
@@ -1864,6 +1944,66 @@ function renderAvisos() {
   $('#listaAvisos').innerHTML = estado.avisos.map(tarjetaAviso).join('');
 }
 
+/* ---------- Anuncios por área curricular ---------- */
+
+function avisosDeArea(areaId) {
+  var lista = estado.avisosAreas && estado.avisosAreas[areaId];
+  return Array.isArray(lista) ? lista : [];
+}
+
+function totalAvisosAreas() {
+  return AREAS.reduce(function (total, area) {
+    return total + avisosDeArea(area.id).length;
+  }, 0);
+}
+
+function tarjetaAvisoArea(area, aviso) {
+  var puedeBorrar = esDocente() || estado.config.borrarAvisosEstudiante === true;
+  return '<article class="anuncio anuncio-area" data-id="' + esc(aviso.id) + '">' +
+    '<div class="anuncio-head">' +
+      '<h3 class="anuncio-titulo">' + esc(aviso.titulo) + '</h3>' +
+      (puedeBorrar ? '<button type="button" class="btn btn-sm btn-peligro" data-accion="eliminar-area">Eliminar</button>' : '') +
+    '</div>' +
+    '<div class="anuncio-cuerpo">' + esc(aviso.cuerpo) + '</div>' +
+    '<div class="anuncio-meta"><span>📢 ' + esc(aviso.autor || 'Docente') + '</span><span>·</span><span title="' + esc(formatearFechaHora(aviso.fecha)) + '">🕒 ' + esc(formatearFecha(aviso.fecha)) + '</span><span>·</span><span>' + esc(haceTiempo(aviso.fecha)) + '</span></div>' +
+  '</article>';
+}
+
+function renderAreas() {
+  var grid = $('#gridAreas');
+  if (!grid) return;
+
+  grid.innerHTML = AREAS.map(function (area) {
+    var avisos = avisosDeArea(area.id);
+    var cuerpo = avisos.length
+      ? avisos.map(function (aviso) { return tarjetaAvisoArea(area, aviso); }).join('')
+      : '<p class="area-vacio">' + (esDocente()
+          ? 'Publica el primer anuncio de esta área.'
+          : 'El docente aún no ha publicado anuncios en esta área.') + '</p>';
+
+    return '<article class="area-card" data-area="' + esc(area.id) + '" style="--area-color:' + esc(area.color) + ';--area-suave:' + esc(area.color) + '14">' +
+      '<header class="area-head">' +
+        '<span class="area-dot" aria-hidden="true"></span>' +
+        '<h3 class="area-nombre">' + esc(area.nombre) + '</h3>' +
+        '<span class="area-cuenta" title="Anuncios publicados">' + avisos.length + '</span>' +
+      '</header>' +
+      '<form class="area-form solo-docente" data-area-form="' + esc(area.id) + '">' +
+        '<input type="text" class="input" name="titulo" maxlength="140" placeholder="Título del anuncio" aria-label="Título del anuncio de ' + esc(area.nombre) + '" required>' +
+        '<textarea class="input" name="cuerpo" rows="2" maxlength="1200" placeholder="Mensaje para esta área" aria-label="Mensaje del anuncio de ' + esc(area.nombre) + '" required></textarea>' +
+        '<button type="submit" class="btn btn-sm btn-primario">Publicar anuncio</button>' +
+      '</form>' +
+      '<div class="lista-anuncios lista-anuncios-area" id="listaArea-' + esc(area.id) + '">' + cuerpo + '</div>' +
+    '</article>';
+  }).join('');
+
+  var badge = $('#badgeAreas');
+  if (badge) {
+    var total = totalAvisosAreas();
+    badge.textContent = total;
+    badge.classList.toggle('oculto', total === 0);
+  }
+}
+
 /* =====================================================================
    20. RENDER — FOTOS
    ===================================================================== */
@@ -2023,8 +2163,8 @@ function aplicarConfigEnUI() {
   $('#chipMaxLibro').textContent = limite;
   $('#chipMaxTarea').textContent = limite;
   $('#chipMaxFoto').textContent = limite;
-  $('#marcaNombre').textContent = c.nombre || 'Hemeroteca de la I.E. SAN JOSÉ DE PUNO';
-  $('#footTexto').textContent = (c.nombre || 'Hemeroteca de la I.E. SAN JOSÉ DE PUNO') + (c.curso ? ' · ' + c.curso : '');
+  $('#marcaNombre').textContent = c.nombre || NOMBRE_APP;
+  $('#footTexto').textContent = (c.nombre || NOMBRE_APP) + (c.curso ? ' · ' + c.curso : '');
 }
 
 function infoAlmacenamiento() {
@@ -2096,6 +2236,7 @@ function solicitarPersistente() {
 function renderSeccion(seccion) {
   switch (seccion) {
     case 'inicio': renderInicio(); renderAlmacenamiento(); break;
+    case 'areas': renderAreas(); break;
     case 'libros': renderLibros(); break;
     case 'tareas': renderTareas(); break;
     case 'anuncios': renderAvisos(); break;
@@ -2111,6 +2252,7 @@ function renderTodo() {
   renderLibros();
   renderTareas();
   renderAvisos();
+  renderAreas();
   renderFotos();
   renderMuseos();
   if (estado.seccion === 'inicio') { renderInicio(); renderAlmacenamiento(); }
@@ -2426,6 +2568,76 @@ function configurarAnuncios() {
   $('#inicioAnuncios').addEventListener('click', manejarBorrarAviso);
 }
 
+/* ---------- Acciones: anuncios por área curricular ---------- */
+
+function configurarAreas() {
+  var grid = $('#gridAreas');
+  if (!grid) return;
+
+  grid.addEventListener('submit', function (e) {
+    var form = e.target.closest('[data-area-form]');
+    if (!form) return;
+    e.preventDefault();
+
+    if (!esDocente()) {
+      toast('Solo el docente puede publicar anuncios de área.', 'alerta');
+      return;
+    }
+
+    var areaId = form.getAttribute('data-area-form');
+    var area = AREAS.filter(function (a) { return a.id === areaId; })[0];
+    if (!area) return;
+
+    var titulo = sanitizar(form.querySelector('[name="titulo"]').value);
+    var cuerpo = sanitizar(form.querySelector('[name="cuerpo"]').value);
+    if (!titulo || !cuerpo) {
+      toast('Completa el título y el mensaje del anuncio.', 'alerta');
+      return;
+    }
+
+    if (!Array.isArray(estado.avisosAreas[areaId])) estado.avisosAreas[areaId] = [];
+    estado.avisosAreas[areaId].unshift({
+      id: uid(),
+      titulo: titulo,
+      cuerpo: cuerpo,
+      autor: nombreUsuario(),
+      fecha: ahora()
+    });
+    guardarAvisosAreas();
+    renderAreas();
+    toast('Anuncio publicado en ' + area.nombre.replace(/^Área de /, '') + '.', 'ok');
+  });
+
+  grid.addEventListener('click', function (e) {
+    var boton = e.target.closest('[data-accion="eliminar-area"]');
+    if (!boton) return;
+
+    var tarjetaArea = boton.closest('.area-card');
+    var tarjetaAviso = boton.closest('.anuncio');
+    if (!tarjetaArea || !tarjetaAviso) return;
+
+    var areaId = tarjetaArea.getAttribute('data-area');
+    var id = tarjetaAviso.getAttribute('data-id');
+    var lista = avisosDeArea(areaId);
+    var aviso = lista.filter(function (a) { return a.id === id; })[0];
+    if (!aviso) return;
+
+    if (!esDocente() && estado.config.borrarAvisosEstudiante !== true) {
+      toast('No tienes permiso para eliminar anuncios.', 'alerta');
+      return;
+    }
+
+    confirmar('Eliminar anuncio', 'Se eliminará «' + aviso.titulo + '» del área.', 'Eliminar', true)
+      .then(function (ok) {
+        if (!ok) return;
+        estado.avisosAreas[areaId] = lista.filter(function (a) { return a.id !== id; });
+        guardarAvisosAreas();
+        renderAreas();
+        toast('Anuncio eliminado.', 'ok');
+      });
+  });
+}
+
 /* =====================================================================
    27. ACCIONES: FOTOS
    ===================================================================== */
@@ -2589,7 +2801,7 @@ function configurarAjustes() {
     var limite = parseInt($('#cfgLimite').value, 10);
     if (!limite || limite < 1048576) limite = LIMITE_POR_DEFECTO;
     estado.config = {
-      nombre: $('#cfgNombre').value.trim() || 'Hemeroteca de la I.E. SAN JOSÉ DE PUNO',
+      nombre: $('#cfgNombre').value.trim() || NOMBRE_APP,
       curso: $('#cfgCurso').value.trim(),
       limite: limite,
       borrarTareaEstudiante: $('#cfgBorrarTarea').checked,
@@ -2823,15 +3035,17 @@ function iniciar() {
   configurarLibros();
   configurarTareas();
   configurarAnuncios();
+  configurarAreas();
   configurarFotos();
   configurarMuseos();
   configurarAjustes();
   configurarGlobales();
 
-  // Reanudar sesión solo si hay token en sessionStorage y datos de sesión
+  // Reanudar sesión solo si hay token válido y datos de sesión con el mismo rol
   var sesion = leerClave(CLAVES.sesion, null);
-  var sesionValida = tokenSesionValido() && sesion &&
-    (sesion.rol === ROLES.DOCENTE || sesion.rol === ROLES.ESTUDIANTE);
+  var sesionValida = sesion &&
+    (sesion.rol === ROLES.DOCENTE || sesion.rol === ROLES.ESTUDIANTE) &&
+    tokenSesionValido(sesion.rol);
   if (sesionValida) {
     estado.sesion = sesion;
     irAApp();
