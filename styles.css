@@ -706,6 +706,193 @@ select.input { cursor: pointer; }
 .info-card h3 { font-size: .92rem; margin-bottom: 7px; }
 .info-card p { font-size: .83rem; color: var(--c-texto-suave); }
 
+/* ---------- 18b. Clasificación de libros ---------- */
+.clasificacion {
+  grid-column: 1 / -1; padding: 14px 16px;
+  border: 1px solid var(--c-borde); border-radius: var(--radio-sm);
+  background: var(--c-superficie-2);
+}
+.clasificacion-head { display: flex; align-items: flex-start; gap: 11px; }
+.clasificacion-ico {
+  width: 38px; height: 38px; flex: none; border-radius: 11px;
+  display: grid; place-items: center; font-size: 1.15rem;
+  background: var(--c-primario-suave);
+}
+.clasificacion-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.clasificacion-txt strong { font-size: .9rem; letter-spacing: -.15px; }
+.clasificacion-txt small { font-size: .78rem; color: var(--c-texto-tenue); }
+.barra-confianza {
+  height: 7px; border-radius: 999px; overflow: hidden;
+  background: var(--c-borde); margin: 12px 0 9px;
+}
+.barra-confianza > span {
+  display: block; height: 100%; width: 0; border-radius: 999px;
+  background: var(--c-peligro); transition: width .45s ease;
+}
+.barra-confianza > span.media { background: var(--c-alerta); }
+.barra-confianza > span.ok { background: var(--c-ok); }
+.clasificacion-motivos { display: flex; flex-wrap: wrap; gap: 6px; }
+.clasificacion-motivos li {
+  font-size: .74rem; padding: 2px 9px; border-radius: 999px;
+  background: var(--c-superficie); border: 1px solid var(--c-borde);
+  color: var(--c-texto-suave);
+}
+
+/* ---------- 18c. Tarjetas de libro ---------- */
+.card-libro .card-media { height: 150px; cursor: default; }
+.libro-media {
+  background: linear-gradient(135deg, var(--area-color, var(--c-primario)) 0%, var(--c-superficie-2) 88%);
+}
+.card-area {
+  position: absolute; left: 9px; bottom: 9px; max-width: calc(100% - 18px);
+  padding: 3px 10px; border-radius: 999px; color: #fff;
+  font-size: .68rem; font-weight: 800; letter-spacing: .3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .25);
+}
+.libro-autor { font-size: .78rem; color: var(--c-texto-tenue); }
+
+/* ---------- 18d. Tareas y actividades ---------- */
+.card-tarea { border-top: 4px solid var(--area-color, var(--c-primario)); }
+.tarea-cabecera {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 12px 15px 0; flex-wrap: wrap;
+}
+.tarea-area {
+  display: inline-block; padding: 3px 9px; border-radius: 999px;
+  color: #fff; font-size: .66rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .4px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tarea-area-mini { font-size: .62rem; padding: 2px 7px; }
+.tarea-cuerpo { display: flex; flex-direction: column; gap: 9px; padding: 11px 15px 15px; }
+.tarea-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px;
+  font-size: .77rem; color: var(--c-texto-tenue);
+}
+.tarea-detalle summary {
+  cursor: pointer; font-size: .8rem; font-weight: 700; color: var(--c-primario);
+  list-style: none;
+}
+.tarea-detalle summary::-webkit-details-marker { display: none; }
+.tarea-detalle summary::before { content: "▸ "; }
+.tarea-detalle[open] summary::before { content: "▾ "; }
+.tarea-detalle p {
+  font-size: .84rem; color: var(--c-texto-suave);
+  margin-top: 7px; white-space: pre-wrap; word-break: break-word;
+}
+.tarea-indicaciones {
+  background: var(--c-superficie-2); border-radius: 8px; padding: 8px 10px;
+  border-left: 3px solid var(--c-borde-fuerte);
+}
+.tarea-adjuntos { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tarea-adjuntos-titulo {
+  width: 100%; font-size: .7rem; font-weight: 800; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--c-texto-tenue);
+}
+.tarea-nota { font-size: .95rem; color: var(--c-texto-tenue); }
+.tarea-nota strong { font-size: 1.65rem; color: var(--c-ok); }
+.tarea-observaciones {
+  font-size: .82rem; color: var(--c-texto-suave);
+  background: var(--c-primario-suave); border-radius: 8px; padding: 8px 10px;
+  white-space: pre-wrap; word-break: break-word;
+}
+.tarea-acciones {
+  display: flex; flex-wrap: wrap; gap: 7px; align-items: center;
+  margin-top: auto; padding-top: 10px; border-top: 1px solid var(--c-borde);
+}
+
+/* ---------- 18e. Estados ---------- */
+.estado {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 999px;
+  font-size: .68rem; font-weight: 800; letter-spacing: .4px;
+  text-transform: uppercase; white-space: nowrap;
+}
+.estado-pendiente { background: var(--c-superficie-2); color: var(--c-texto-suave); border: 1px solid var(--c-borde); }
+.estado-entregada { background: rgba(14, 165, 233, .15); color: #0369a1; }
+.estado-en-revision { background: rgba(245, 158, 11, .18); color: #b45309; }
+.estado-calificada { background: rgba(22, 163, 74, .16); color: var(--c-ok); }
+.estado-fuera-de-plazo { background: rgba(220, 38, 38, .15); color: var(--c-peligro); }
+.estado-publicada { background: rgba(22, 163, 74, .16); color: var(--c-ok); }
+.estado-borrador { background: rgba(245, 158, 11, .18); color: #b45309; }
+[data-theme="oscuro"] .estado-entregada { color: #7dd3fc; }
+[data-theme="oscuro"] .estado-en-revision,
+[data-theme="oscuro"] .estado-borrador { color: var(--c-alerta); }
+
+/* ---------- 18f. Tablas de entregas y calificaciones ---------- */
+.tabla-envoltura {
+  background: var(--c-superficie); border: 1px solid var(--c-borde);
+  border-radius: var(--radio); box-shadow: var(--sombra-sm); overflow-x: auto;
+}
+.tabla { width: 100%; min-width: 840px; border-collapse: collapse; font-size: .83rem; }
+.tabla th {
+  text-align: left; padding: 11px 12px; white-space: nowrap;
+  font-size: .71rem; font-weight: 800; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--c-texto-tenue);
+  background: var(--c-superficie-2); border-bottom: 1px solid var(--c-borde);
+}
+.tabla td { padding: 11px 12px; border-bottom: 1px solid var(--c-borde); vertical-align: top; }
+.tabla tbody tr:last-child td { border-bottom: 0; }
+.tabla tbody tr:hover { background: var(--c-superficie-2); }
+.celda-obs { max-width: 300px; white-space: pre-wrap; word-break: break-word; color: var(--c-texto-suave); }
+.celda-acciones { display: flex; flex-wrap: wrap; gap: 6px; }
+.nota-grande { font-size: 1.05rem; color: var(--c-ok); }
+.tenue { color: var(--c-texto-tenue); }
+
+/* ---------- 18g. Notificaciones internas ---------- */
+.notif { position: relative; }
+.notif-btn { position: relative; }
+.notif-badge {
+  position: absolute; top: -5px; right: -5px;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  display: grid; place-items: center; font-style: normal;
+  font-size: .64rem; font-weight: 800; color: #fff;
+  background: var(--c-peligro); border: 2px solid var(--c-superficie);
+  border-radius: 999px; line-height: 1;
+}
+.notif-panel {
+  position: absolute; right: 0; top: calc(100% + 10px);
+  width: min(370px, calc(100vw - 28px));
+  background: var(--c-superficie); border: 1px solid var(--c-borde);
+  border-radius: var(--radio); box-shadow: var(--sombra-lg);
+  overflow: hidden; z-index: 90; animation: entrar .18s ease;
+}
+.notif-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--c-borde);
+}
+.notif-head .btn-link { font-size: .74rem; }
+.notif-lista { max-height: min(430px, 62vh); overflow-y: auto; }
+.notif-item {
+  display: flex; flex-direction: column; gap: 3px; width: 100%;
+  text-align: left; border: 0; border-bottom: 1px solid var(--c-borde);
+  background: transparent; padding: 11px 14px; cursor: pointer;
+}
+.notif-item:hover { background: var(--c-superficie-2); }
+.notif-item.no-leida { background: var(--c-primario-suave); }
+.notif-item strong { font-size: .84rem; }
+.notif-item small { font-size: .77rem; color: var(--c-texto-suave); }
+.notif-item time { font-size: .7rem; color: var(--c-texto-tenue); }
+.notif-vacio { padding: 22px 14px; text-align: center; font-size: .83rem; color: var(--c-texto-tenue); }
+
+/* ---------- 18h. Utilidades de formularios de datos ---------- */
+.filtros-form { align-items: center; }
+.input-sm { width: auto; padding: 7px 11px; font-size: .82rem; }
+.archivos-seleccionados { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+.archivos-seleccionados li {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: .79rem; background: var(--c-superficie-2);
+  border: 1px solid var(--c-borde); border-radius: 7px; padding: 5px 9px;
+  word-break: break-all;
+}
+.modal-form { display: flex; flex-direction: column; gap: 13px; }
+.modal-pequena .modal-body.modal-form { text-align: left; }
+.chip-mini { font-size: .68rem; padding: 2px 8px; }
+.filtro-cuenta { font-style: normal; font-size: .68rem; opacity: .75; }
+.filtro-sep { width: 1px; align-self: stretch; background: var(--c-borde); margin: 0 3px; }
+.filtro[style*="--filtro-color"].activo { background: var(--filtro-color); border-color: var(--filtro-color); }
+
 /* ---------- 19. Responsive ---------- */
 @media (max-width: 1080px) {
   .form-rejilla { grid-template-columns: 1fr; }
@@ -728,6 +915,7 @@ select.input { cursor: pointer; }
   .buscador { display: none; }
   .modal-grande { height: calc(100vh - 24px); }
   .visor-docx { padding: 22px 20px; }
+  .notif-panel { position: fixed; right: 12px; top: calc(var(--topbar-h) + 8px); }
 }
 
 @media (max-width: 620px) {
@@ -746,6 +934,12 @@ select.input { cursor: pointer; }
   .toasts { right: 10px; left: 10px; bottom: 10px; max-width: none; }
   .form-acciones .btn { flex: 1; }
   .input-busqueda { max-width: none; }
+  .tabla { min-width: 700px; }
+  .filtros-form { width: 100%; }
+  .filtros-form .input-sm { flex: 1 1 128px; width: 100%; }
+  .filtros-form .btn { flex: 1 1 100%; }
+  .clasificacion-head { flex-wrap: wrap; }
+  .tarea-acciones .btn { flex: 1; }
 }
 
 @media (max-width: 400px) {

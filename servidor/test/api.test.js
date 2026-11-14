@@ -376,6 +376,14 @@ test('borrador invisible, publicación y adjuntos', async () => {
   assert.equal(adjunto.datos.tarea.adjuntos.length, 1);
   ctx.adjuntoId = adjunto.datos.tarea.adjuntos[0].id;
 
+  // La lista también trae los adjuntos (para mostrarlos en las tarjetas).
+  const listadoDocente = await pedir('GET', '/api/tareas', { token: ctx.docente });
+  const tareaEnLista = listadoDocente.datos.tareas.find((t) => t.id === ctx.tarea.id);
+  assert.equal(tareaEnLista.adjuntos.length, 1);
+
+  const listadoEstudiante = await pedir('GET', '/api/tareas', { token: ctx.estudiante });
+  assert.equal(listadoEstudiante.datos.tareas[0].adjuntos.length, 1);
+
   const descarga = await pedir(
     'GET',
     `/api/tareas/${ctx.tarea.id}/adjuntos/${ctx.adjuntoId}/archivo`,
@@ -465,7 +473,8 @@ test('el docente revisa, descarga y califica', async () => {
 
   const calificar = await pedir('PATCH', `/api/entregas/${ctx.entregaAna.id}`, {
     token: ctx.docente,
-    cuerpo: { estado: 'calificada', calificacion: 18, observaciones: 'Buen trabajo, revisa el ejercicio 7.' },
+    // Sin `estado`: al enviar una nota la entrega debe pasar a «calificada».
+    cuerpo: { calificacion: 18, observaciones: 'Buen trabajo, revisa el ejercicio 7.' },
   });
   assert.equal(calificar.estado, 200, JSON.stringify(calificar.datos));
   assert.equal(calificar.datos.entrega.estado, 'calificada');

@@ -1,31 +1,32 @@
 #!/usr/bin/env node
 /**
- * Genera config.js a partir de las variables de entorno (.env o variables del
- * sistema, por ejemplo GitHub Actions Secrets).
+ * Genera config.js para el frontend a partir de variables de entorno.
  *
- * El archivo generado SOLO contiene hashes; nunca las contraseñas en texto
- * plano. config.js está en .gitignore y no debe publicarse en el repositorio.
+ * Desde que la autenticación y los datos viven en el servidor (carpeta
+ * servidor/), el frontend ya NO necesita hashes de contraseñas. Solo necesita:
+ *   - API_URL      URL pública del API (por ejemplo https://api.midominio.org)
+ *   - TAMANO_MAXIMO_MB  límite por archivo, para avisar antes de subir
+ *
+ * Las credenciales de demostración se configuran en servidor/.env y las valida
+ * el servidor con scrypt. Este archivo no contiene secretos.
+ *
+ * config.js está en .gitignore y debe generarse en el despliegue.
  *
  * Uso:
  *   node scripts/generar-config.mjs
- *   DOCENTE_USUARIO=... DOCENTE_PASSWORD=... node scripts/generar-config.mjs
+ *   API_URL=https://api.ejemplo.org node scripts/generar-config.mjs
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const RAIZ = fileURLToPath(new URL('..', import.meta.url));
-const RUTA_ENV = join(RAIZ, '.env');
 const RUTA_CONFIG = join(RAIZ, 'config.js');
+const ARCHIVOS_ENV = [join(RAIZ, '.env'), join(RAIZ, 'servidor', '.env')];
 
-const VARIABLES = [
-  'DOCENTE_USUARIO',
-  'DOCENTE_PASSWORD',
-  'ESTUDIANTE_USUARIO',
-  'ESTUDIANTE_PASSWORD'
-];
+const API_POR_DEFECTO = 'http://127.0.0.1:3000';
+const MAX_MB_POR_DEFECTO = 25;
 
 function leerArchivoEnv(ruta) {
   if (!existsSync(ruta)) return {};
@@ -49,70 +50,37 @@ function leerArchivoEnv(ruta) {
   return valores;
 }
 
-function sha256(texto) {
-  return createHash('sha256').update(String(texto), 'utf8').digest('hex');
+// El .env de la raíz manda; servidor/.env aporta el límite si no está definido.
+const desdeArchivo = Object.assign({}, ...ARCHIVOS_ENV.map(leerArchivoEnv));
+
+function valor(nombre, porDefecto) {
+  const bruto = process.env[nombre] || desdeArchivo[nombre] || '';
+  const limpio = String(bruto).trim();
+  return limpio || porDefecto;
 }
 
-/** Copia exacta del respaldo de script.js para contextos sin crypto.subtle. */
-function hashRespaldo(cadena) {
-  let h1 = 0xdeadbeef ^ cadena.length;
-  let h2 = 0x41c6ce57 ^ cadena.length;
-  for (let i = 0; i < cadena.length; i++) {
-    const ch = cadena.charCodeAt(i);
-    h1 = Math.imul(h1 ^ ch, 2654435761);
-    h2 = Math.imul(h2 ^ ch, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return ('00000000' + (h2 >>> 0).toString(16)).slice(-8) +
-         ('00000000' + (h1 >>> 0).toString(16)).slice(-8);
-}
+const apiUrl = valor('API_URL', API_POR_DEFECTO).replace(/\/+$/, '');
+const maxMb = Number(valor('TAMANO_MAXIMO_MB', MAX_MB_POR_DEFECTO));
 
-const desdeArchivo = leerArchivoEnv(RUTA_ENV);
-const valores = {};
-
-VARIABLES.forEach(function (nombre) {
-  const valor = process.env[nombre] || desdeArchivo[nombre] || '';
-  valores[nombre] = String(valor).trim();
-});
-
-const faltantes = VARIABLES.filter(function (nombre) { return !valores[nombre]; });
-if (faltantes.length) {
-  console.error('Faltan variables de entorno: ' + faltantes.join(', '));
-  console.error('Copia .env.example a .env y completa los valores de demostración,');
-  console.error('o define esas variables en el entorno (por ejemplo, GitHub Secrets).');
+if (!/^https?:\/\//i.test(apiUrl)) {
+  console.error('API_URL debe empezar por http:// o https:// (valor recibido: ' + apiUrl + ').');
   process.exit(1);
 }
-
-const placeholders = VARIABLES.filter(function (nombre) {
-  return valores[nombre].startsWith('cambia_');
-});
-if (placeholders.length) {
-  console.error('Reemplaza los valores de ejemplo en .env: ' + placeholders.join(', '));
+if (!Number.isFinite(maxMb) || maxMb <= 0) {
+  console.error('TAMANO_MAXIMO_MB debe ser un número mayor que cero.');
   process.exit(1);
-}
-
-if (valores.DOCENTE_USUARIO === valores.ESTUDIANTE_USUARIO) {
-  console.warn('Aviso: docentes y estudiantes usan el mismo usuario. Usa usuarios distintos.');
-}
-
-function bloque(rol, usuario, password) {
-  return '  ' + rol + ': Object.freeze({\n' +
-    "    usuarioHash: '" + sha256(usuario) + "',\n" +
-    "    passwordHash: '" + sha256(password) + "',\n" +
-    "    usuarioRespaldo: '" + hashRespaldo(usuario) + "',\n" +
-    "    passwordRespaldo: '" + hashRespaldo(password) + "'\n" +
-    '  })';
 }
 
 const salida = '/* Archivo generado por scripts/generar-config.mjs. No editar a mano.\n' +
-  '   Contiene únicamente hashes; no incluye contraseñas en texto plano.\n' +
-  '   No lo subas al repositorio: está en .gitignore. */\n' +
-  'window.HEMEROTECA_AUTH = Object.freeze({\n' +
-  bloque('docente', valores.DOCENTE_USUARIO, valores.DOCENTE_PASSWORD) + ',\n' +
-  bloque('estudiante', valores.ESTUDIANTE_USUARIO, valores.ESTUDIANTE_PASSWORD) + '\n' +
+  '   Solo contiene la URL pública del API y el límite de subida.\n' +
+  '   No incluye credenciales ni secretos. */\n' +
+  'window.HEMEROTECA_CONFIG = Object.freeze({\n' +
+  "  apiUrl: '" + apiUrl + "',\n" +
+  '  maxMb: ' + maxMb + '\n' +
   '});\n';
 
 writeFileSync(RUTA_CONFIG, salida, 'utf8');
-console.log('config.js generado correctamente (solo hashes SHA-256).');
+console.log('config.js generado correctamente.');
+console.log('API: ' + apiUrl);
+console.log('Límite por archivo: ' + maxMb + ' MB');
 console.log('Archivo: ' + RUTA_CONFIG);

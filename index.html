@@ -69,7 +69,7 @@
       </button>
     </form>
 
-    <p class="login-foot">Proyecto educativo &middot; HTML + CSS + JavaScript &middot; sin servidor</p>
+    <p class="login-foot">Proyecto educativo &middot; HTML + CSS + JavaScript &middot; API propio en Node.js</p>
   </div>
 </div>
 
@@ -109,19 +109,38 @@
       </button>
       <button type="button" class="nav-item" data-seccion="libros">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h11a3 3 0 0 1 3 3v17l-4.5-2.5L12 22l-3.5-2.5L4 22V5a3 3 0 0 1 3-3Zm0 2a1 1 0 0 0-1 1v14.9l2.5-1.4a1 1 0 0 1 1 0L12 20.9l3.5-2.4a1 1 0 0 1 1 0l2.5 1.4V5a1 1 0 0 0-1-1H6Z"/></svg>
-        <span>Libros</span>
+        <span>Biblioteca</span>
         <em class="nav-badge" id="badgeLibros">0</em>
-      </button>
-      <button type="button" class="nav-item" data-seccion="tareas">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2h6a2 2 0 0 1 2 2h1a2 2 0 0 1 2 2v16H4V6a2 2 0 0 1 2-2h1a2 2 0 0 1 2-2Zm0 2v1h6V4H9Zm-3 5v2h12V9H6Zm0 4v2h12v-2H6Zm0 4v2h8v-2H6Z"/></svg>
-        <span>Tareas</span>
-        <em class="nav-badge" id="badgeTareas">0</em>
       </button>
       <button type="button" class="nav-item" data-seccion="anuncios">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4a1 1 0 0 0 1 1h2l4 4V5L6 9H4a1 1 0 0 0-1 1Zm16.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4Zm-2.5-8v2.06A6.5 6.5 0 0 1 17 20.94V23h2V4h-2Z"/></svg>
         <span>Anuncios</span>
         <em class="nav-badge nav-badge-alerta" id="badgeAnuncios">0</em>
       </button>
+
+      <hr class="nav-sep">
+
+      <button type="button" class="nav-item" data-seccion="tareas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2h6a2 2 0 0 1 2 2h1a2 2 0 0 1 2 2v16H4V6a2 2 0 0 1 2-2h1a2 2 0 0 1 2-2Zm0 2v1h6V4H9Zm-3 5v2h12V9H6Zm0 4v2h12v-2H6Zm0 4v2h8v-2H6Z"/></svg>
+        <span class="solo-docente">Tareas y actividades</span>
+        <span class="solo-estudiante">Mis tareas</span>
+        <em class="nav-badge" id="badgeTareas">0</em>
+      </button>
+      <button type="button" class="nav-item" data-seccion="entregas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a5 5 0 0 1 5 5v2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2V7a5 5 0 0 1 5-5Zm3 7V7a3 3 0 0 0-6 0v2h6Zm-3 3a2 2 0 0 0-1 3.7V18h2v-2.3A2 2 0 0 0 12 12Z"/></svg>
+        <span class="solo-docente">Entregas de estudiantes</span>
+        <span class="solo-estudiante">Mis entregas</span>
+        <em class="nav-badge" id="badgeEntregas">0</em>
+      </button>
+      <button type="button" class="nav-item" data-seccion="calificaciones">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3 5 6 1-4.5 4.3 1.1 6.1L12 15.9 6.4 18.4l1.1-6.1L3 8l6-1 3-5Zm-1 12h2v2h-2v-2Zm0-7h2v5h-2V7Z"/></svg>
+        <span class="solo-docente">Calificaciones</span>
+        <span class="solo-estudiante">Mis calificaciones</span>
+        <em class="nav-badge" id="badgeCalificaciones">0</em>
+      </button>
+
+      <hr class="nav-sep">
+
       <button type="button" class="nav-item" data-seccion="fotos">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm1 13h14l-4.5-6-3.5 4.5L9.5 13 5 17Zm3.5-7a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg>
         <span>Fotos</span>
@@ -160,13 +179,27 @@
 
       <div class="topbar-info">
         <h1 class="topbar-titulo" id="tituloSeccion">Inicio</h1>
-        <p class="topbar-sub" id="subtituloSeccion">Resumen de la hemeroteca</p>
+        <p class="topbar-sub" id="subtituloSeccion">Resumen de la biblioteca</p>
       </div>
 
       <div class="topbar-acciones">
         <div class="buscador" id="buscadorGlobal">
           <span aria-hidden="true">&#128269;</span>
           <input type="search" id="inputBuscar" placeholder="Buscar libros, tareas&hellip;" aria-label="Buscar">
+        </div>
+        <div class="notif" id="notifContenedor">
+          <button type="button" class="btn-icono notif-btn" id="btnNotificaciones"
+                  aria-label="Notificaciones" aria-expanded="false" title="Notificaciones">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a6 6 0 0 0-6 6v3.6c0 .7-.2 1.4-.6 2L4 16v2h16v-2l-1.4-2.4a4 4 0 0 1-.6-2V8a6 6 0 0 0-6-6Zm0 20a3 3 0 0 0 3-3H9a3 3 0 0 0 3 3Z"/></svg>
+            <em class="notif-badge oculto" id="badgeNotificaciones">0</em>
+          </button>
+          <div class="notif-panel oculto" id="panelNotificaciones">
+            <div class="notif-head">
+              <strong>Notificaciones</strong>
+              <button type="button" class="btn-link" id="btnMarcarNotificaciones">Marcar todas como leídas</button>
+            </div>
+            <div class="notif-lista" id="listaNotificaciones"></div>
+          </div>
         </div>
         <button type="button" class="btn-icono" id="btnTema" aria-label="Cambiar tema" title="Cambiar tema">&#127769;</button>
       </div>
@@ -181,7 +214,7 @@
         <div class="dos-col">
           <div class="panel">
             <div class="panel-head">
-              <h2>Annuncios recientes</h2>
+              <h2>Anuncios recientes</h2>
               <button type="button" class="btn btn-sm btn-soft" data-ir="anuncios">Ver todos</button>
             </div>
             <div id="inicioAnuncios" class="lista-anuncios"></div>
@@ -192,18 +225,18 @@
               <h2>Accesos r&aacute;pidos</h2>
             </div>
             <div class="tiles">
-              <button type="button" class="tile" data-ir="libros"><span>&#128214;</span>Libros</button>
+              <button type="button" class="tile" data-ir="libros"><span>&#128214;</span>Biblioteca</button>
               <button type="button" class="tile" data-ir="tareas"><span>&#128203;</span>Tareas</button>
-              <button type="button" class="tile" data-ir="fotos"><span>&#128247;</span>Fotos</button>
-              <button type="button" class="tile" data-ir="museos"><span>&#127963;</span>Museos</button>
+              <button type="button" class="tile" data-ir="entregas"><span>&#128229;</span>Entregas</button>
+              <button type="button" class="tile" data-ir="calificaciones"><span>&#127941;</span>Notas</button>
             </div>
             <div class="almacen-mini">
               <div class="almacen-mini-head">
-                <strong>Almacenamiento</strong>
+                <strong>Almacenamiento local</strong>
                 <span id="almacenMiniTxt">Calculando&hellip;</span>
               </div>
               <div class="barra"><span id="almacenMiniBarra" style="width:0%"></span></div>
-              <small id="almacenMiniNota">Los archivos se guardan en este navegador.</small>
+              <small id="almacenMiniNota">Las fotos y los anuncios se guardan en este navegador; los libros y tareas, en el servidor.</small>
             </div>
           </div>
         </div>
@@ -215,38 +248,65 @@
         <div class="grid grid-areas" id="gridAreas"></div>
       </section>
 
-      <!-- ====== LIBROS ====== -->
+      <!-- ====== BIBLIOTECA ====== -->
       <section class="seccion" id="sec-libros">
         <div class="panel panel-subir solo-docente">
           <div class="panel-head">
-            <h2>Subir libro</h2>
-            <span class="chip">Word &middot; PDF &middot; m&aacute;x. <span id="chipMaxLibro">1 GB</span></span>
+            <h2>Subir libro y clasificarlo</h2>
+            <span class="chip">PDF &middot; DOC &middot; DOCX &middot; m&aacute;x. <span id="chipMaxLibro">25 MB</span></span>
           </div>
-          <form class="form-rejilla" id="formLibro">
+          <form class="form-rejilla" id="formLibro" novalidate>
             <div class="drop" id="dropLibro" tabindex="0" role="button" aria-label="Seleccionar archivo del libro">
-              <input type="file" id="inputLibro" accept=".doc,.docx,.pdf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+              <input type="file" id="inputLibro" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
               <span class="drop-icono" aria-hidden="true">&#128228;</span>
-              <strong id="dropLibroTxt">Arrastra el archivo aqu&iacute; o haz clic para elegir</strong>
-              <small id="dropLibroInfo">.doc &middot; .docx &middot; .pdf</small>
+              <strong id="dropLibroTxt">Arrastra el PDF aqu&iacute; o haz clic para elegir</strong>
+              <small id="dropLibroInfo">.pdf &middot; .doc &middot; .docx</small>
             </div>
+
             <div class="form-cols">
               <label class="campo" for="libroTitulo">
                 <span class="campo-label">T&iacute;tulo del libro <b class="req">*</b></span>
-                <input type="text" id="libroTitulo" class="input" placeholder="Ej. Historia del siglo XX" maxlength="140" required>
+                <input type="text" id="libroTitulo" class="input" placeholder="Ej. &Aacute;lgebra para secundaria" maxlength="140" required>
               </label>
               <label class="campo" for="libroAutor">
                 <span class="campo-label">Autor</span>
-                <input type="text" id="libroAutor" class="input" placeholder="Ej. Juan P&eacute;rez" maxlength="120">
+                <input type="text" id="libroAutor" class="input" placeholder="Ej. Ministerio de Educaci&oacute;n" maxlength="120">
               </label>
-              <label class="campo campo-ancho" for="libroCategoria">
-                <span class="campo-label">&Aacute;rea / Materia</span>
-                <input type="text" id="libroCategoria" class="input" placeholder="Ej. Historia, Matem&aacute;ticas&hellip;" maxlength="80">
+              <label class="campo" for="libroArea">
+                <span class="campo-label">&Aacute;rea curricular <b class="req">*</b></span>
+                <select id="libroArea" class="input" required>
+                  <option value="">Detectando&hellip;</option>
+                </select>
+                <small class="campo-ayuda">La sugerencia autom&aacute;tica se puede cambiar antes de publicar.</small>
               </label>
+              <div class="campo">
+                <span class="campo-label">Publicaci&oacute;n</span>
+                <label class="switch">
+                  <input type="checkbox" id="libroPublicado" checked>
+                  <span class="switch-track" aria-hidden="true"></span>
+                  <span>Visible para los estudiantes</span>
+                </label>
+              </div>
               <label class="campo campo-ancho" for="libroDesc">
                 <span class="campo-label">Descripci&oacute;n</span>
                 <textarea id="libroDesc" class="input" rows="2" maxlength="500" placeholder="Breve sinopsis del material"></textarea>
               </label>
             </div>
+
+            <div class="clasificacion oculto" id="clasificacionPanel" aria-live="polite">
+              <div class="clasificacion-head">
+                <span class="clasificacion-ico" aria-hidden="true">&#10024;</span>
+                <div class="clasificacion-txt">
+                  <strong id="clasificacionTitulo">Esperando el archivo&hellip;</strong>
+                  <small id="clasificacionDetalle">El sistema leer&aacute; el PDF para proponer un &aacute;rea.</small>
+                </div>
+                <span class="tag tag-azul" id="clasificacionConfianza">Sin an&aacute;lisis</span>
+              </div>
+              <div class="barra-confianza"><span id="clasificacionBarra" style="width:0%"></span></div>
+              <ul class="clasificacion-motivos" id="clasificacionMotivos"></ul>
+            </div>
+
+            <input type="hidden" id="libroEditando" value="">
             <div class="form-acciones">
               <button type="reset" class="btn btn-soft" id="btnLimpiarLibro">Limpiar</button>
               <button type="submit" class="btn btn-primario" id="btnGuardarLibro">Guardar libro</button>
@@ -259,58 +319,82 @@
 
         <div class="barra-filtros">
           <div class="filtros" id="filtrosCategoria"></div>
-          <input type="search" class="input input-busqueda" id="buscarLibro" placeholder="Buscar por t&iacute;tulo, autor o categor&iacute;a&hellip;">
+          <input type="search" class="input input-busqueda" id="buscarLibro" placeholder="Buscar por t&iacute;tulo, autor o descripci&oacute;n&hellip;">
         </div>
 
+        <p class="nota-form" id="notaBiblioteca"></p>
         <div class="grid" id="gridLibros"></div>
       </section>
 
-      <!-- ====== TAREAS ====== -->
+      <!-- ====== TAREAS Y ACTIVIDADES ====== -->
       <section class="seccion" id="sec-tareas">
-        <div class="panel panel-subir">
+        <div class="panel panel-subir solo-docente" id="panelFormTarea">
           <div class="panel-head">
-            <h2 id="tituloSubirTarea">Subir tarea</h2>
-            <span class="chip">Foto &middot; Word &middot; PDF &middot; m&aacute;x. <span id="chipMaxTarea">1 GB</span></span>
+            <h2 id="tituloFormTarea">Nueva tarea o actividad</h2>
+            <span class="chip">PDF &middot; Word &middot; JPG &middot; PNG</span>
           </div>
-          <form class="form-rejilla" id="formTarea">
-            <div class="drop" id="dropTarea" tabindex="0" role="button" aria-label="Seleccionar archivo de la tarea">
-              <input type="file" id="inputTarea"
-                     accept="image/*,.doc,.docx,.pdf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
-              <span class="drop-icono" aria-hidden="true">&#128206;</span>
-              <strong id="dropTareaTxt">Arrastra tu tarea aqu&iacute; o haz clic para elegir</strong>
-              <small id="dropTareaInfo">.jpg &middot; .png &middot; .doc &middot; .docx &middot; .pdf</small>
-            </div>
+          <form class="form-rejilla" id="formTarea" novalidate>
             <div class="form-cols">
-              <label class="campo solo-estudiante" for="tareaAutor">
-                <span class="campo-label">Tu nombre</span>
-                <input type="text" id="tareaAutor" class="input" placeholder="Ej. Ana Pérez" maxlength="60">
-                <small class="campo-ayuda">Aparece junto a tu entrega para que el docente la identifique.</small>
-              </label>
               <label class="campo campo-ancho" for="tareaTitulo">
-                <span class="campo-label">T&iacute;tulo <b class="req">*</b></span>
-                <input type="text" id="tareaTitulo" class="input" placeholder="Ej. Ensayo sobre el Romanticismo" maxlength="140" required>
+                <span class="campo-label">T&iacute;tulo de la tarea <b class="req">*</b></span>
+                <input type="text" id="tareaTitulo" class="input" placeholder="Ej. Pr&aacute;ctica de ecuaciones" maxlength="140" required>
               </label>
-              <label class="campo" for="tareaMateria">
-                <span class="campo-label">Materia</span>
-                <input type="text" id="tareaMateria" class="input" placeholder="Ej. Lenguaje" maxlength="80">
+              <label class="campo" for="tareaArea">
+                <span class="campo-label">&Aacute;rea curricular <b class="req">*</b></span>
+                <select id="tareaArea" class="input" required></select>
               </label>
-              <label class="campo campo-ancho" for="tareaDesc">
-                <span class="campo-label">Comentario</span>
-                <textarea id="tareaDesc" class="input" rows="2" maxlength="500" placeholder="Nota para el docente (opcional)"></textarea>
+              <label class="campo" for="tareaPuntaje">
+                <span class="campo-label">Puntaje m&aacute;ximo</span>
+                <input type="number" id="tareaPuntaje" class="input" min="1" max="100" step="1" value="20">
               </label>
-              <div class="campo campo-ancho solo-docente">
-                <span class="campo-label">&Aacute;mbito</span>
-                <div class="radios">
-                  <label class="radio"><input type="radio" name="tareaAmbito" value="actividad" checked><span>Actividad para el curso</span></label>
-                  <label class="radio"><input type="radio" name="tareaAmbito" value="entrega"><span>Entrega de un estudiante</span></label>
-                </div>
+              <label class="campo" for="tareaLimite">
+                <span class="campo-label">Fecha y hora l&iacute;mite <b class="req">*</b></span>
+                <input type="datetime-local" id="tareaLimite" class="input" required>
+              </label>
+              <label class="campo" for="tareaPublicacion">
+                <span class="campo-label">Fecha de publicaci&oacute;n</span>
+                <input type="datetime-local" id="tareaPublicacion" class="input">
+                <small class="campo-ayuda">Si es futura, se publicar&aacute; autom&aacute;ticamente.</small>
+              </label>
+              <label class="campo campo-ancho" for="tareaInstrucciones">
+                <span class="campo-label">Descripci&oacute;n e instrucciones <b class="req">*</b></span>
+                <textarea id="tareaInstrucciones" class="input" rows="4" maxlength="4000" placeholder="Explica qu&eacute; debe hacer el estudiante, el formato y los criterios de evaluaci&oacute;n." required></textarea>
+              </label>
+              <label class="campo campo-ancho" for="tareaIndicaciones">
+                <span class="campo-label">Indicaciones adicionales</span>
+                <textarea id="tareaIndicaciones" class="input" rows="2" maxlength="2000" placeholder="Material de consulta, recomendaciones&hellip;"></textarea>
+              </label>
+              <div class="campo campo-ancho">
+                <span class="campo-label">Publicaci&oacute;n y oportunidades</span>
+                <label class="switch">
+                  <input type="checkbox" id="tareaPublicada" checked>
+                  <span class="switch-track" aria-hidden="true"></span>
+                  <span>Publicar ahora (visible para estudiantes)</span>
+                </label>
+                <label class="switch">
+                  <input type="checkbox" id="tareaReapertura">
+                  <span class="switch-track" aria-hidden="true"></span>
+                  <span>Permitir entregar o corregir despu&eacute;s del plazo</span>
+                </label>
+              </div>
+              <div class="campo campo-ancho">
+                <span class="campo-label">Material adjunto (opcional)</span>
+                <input type="file" id="tareaAdjuntos" class="input" multiple
+                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png">
+                <small class="campo-ayuda">Se adjunta al guardar. M&aacute;ximo <span id="chipMaxTarea">25</span> MB por archivo.</small>
+                <ul class="archivos-seleccionados" id="tareaAdjuntosLista"></ul>
               </div>
             </div>
+            <input type="hidden" id="tareaEditando" value="">
             <div class="form-acciones">
-              <button type="reset" class="btn btn-soft">Limpiar</button>
+              <button type="reset" class="btn btn-soft" id="btnLimpiarTarea">Limpiar</button>
               <button type="submit" class="btn btn-primario" id="btnGuardarTarea">Guardar tarea</button>
             </div>
           </form>
+          <div class="aviso-edicion oculto" id="avisoEdicionTarea">
+            Est&aacute;s <b>editando</b> una tarea. Los adjuntos nuevos se a&ntilde;aden; los existentes se conservan.
+            <button type="button" class="btn-link" id="btnCancelarEdicionTarea">Cancelar edici&oacute;n</button>
+          </div>
         </div>
 
         <div class="barra-filtros">
@@ -318,7 +402,48 @@
           <input type="search" class="input input-busqueda" id="buscarTarea" placeholder="Buscar tareas&hellip;">
         </div>
 
+        <p class="nota-form" id="notaTareas"></p>
         <div class="grid" id="gridTareas"></div>
+      </section>
+
+      <!-- ====== ENTREGAS ====== -->
+      <section class="seccion" id="sec-entregas">
+        <div class="barra-filtros solo-docente">
+          <div class="filtros filtros-form">
+            <select class="input input-sm" id="entregaFiltroArea" aria-label="Filtrar por &aacute;rea">
+              <option value="">Todas las &aacute;reas</option>
+            </select>
+            <select class="input input-sm" id="entregaFiltroTarea" aria-label="Filtrar por tarea">
+              <option value="">Todas las tareas</option>
+            </select>
+            <select class="input input-sm" id="entregaFiltroEstado" aria-label="Filtrar por estado">
+              <option value="">Todos los estados</option>
+              <option value="entregada">Entregada</option>
+              <option value="en_revision">En revisi&oacute;n</option>
+              <option value="calificada">Calificada</option>
+              <option value="fuera_de_plazo">Fuera de plazo</option>
+            </select>
+            <input type="search" class="input input-sm" id="entregaFiltroEstudiante" placeholder="Estudiante&hellip;" aria-label="Filtrar por estudiante">
+            <input type="date" class="input input-sm" id="entregaFiltroDesde" aria-label="Desde">
+            <input type="date" class="input input-sm" id="entregaFiltroHasta" aria-label="Hasta">
+            <button type="button" class="btn btn-sm btn-soft" id="entregaFiltroLimpiar">Limpiar</button>
+          </div>
+        </div>
+        <p class="nota-form" id="notaEntregas"></p>
+        <div class="tabla-envoltura" id="tablaEntregas"></div>
+      </section>
+
+      <!-- ====== CALIFICACIONES ====== -->
+      <section class="seccion" id="sec-calificaciones">
+        <div class="barra-filtros">
+          <div class="filtros filtros-form">
+            <select class="input input-sm" id="calificacionFiltroArea" aria-label="Filtrar calificaciones por &aacute;rea">
+              <option value="">Todas las &aacute;reas</option>
+            </select>
+          </div>
+        </div>
+        <p class="nota-form" id="notaCalificaciones"></p>
+        <div class="tabla-envoltura" id="tablaCalificaciones"></div>
       </section>
 
       <!-- ====== ANUNCIOS ====== -->
@@ -468,39 +593,39 @@
           </div>
 
           <div class="panel">
-            <div class="panel-head"><h2>Almacenamiento y respaldo</h2></div>
+            <div class="panel-head"><h2>Datos locales y respaldo</h2></div>
             <div class="almacen">
               <div class="almacen-head">
-                <strong>Espacio usado</strong><span id="almacenTxt">Calculando&hellip;</span>
+                <strong>Espacio local usado (fotos y preferencias)</strong><span id="almacenTxt">Calculando&hellip;</span>
               </div>
               <div class="barra"><span id="almacenBarra" style="width:0%"></span></div>
               <small id="almacenNota" class="campo-ayuda">&nbsp;</small>
             </div>
             <div class="acciones-lista">
               <button type="button" class="btn btn-soft btn-bloque" id="btnPersistente">Solicitar almacenamiento permanente</button>
-              <button type="button" class="btn btn-soft btn-bloque" id="btnExportarMeta">Exportar metadatos (JSON)</button>
-              <button type="button" class="btn btn-soft btn-bloque" id="btnExportarTodo">Exportar copia completa (con archivos)</button>
-              <button type="button" class="btn btn-soft btn-bloque" id="btnImportar">Importar copia de seguridad</button>
+              <button type="button" class="btn btn-soft btn-bloque" id="btnExportarMeta">Exportar datos locales (JSON)</button>
+              <button type="button" class="btn btn-soft btn-bloque" id="btnExportarTodo">Exportar copia local (con fotos)</button>
+              <button type="button" class="btn btn-soft btn-bloque" id="btnImportar">Importar datos locales</button>
               <input type="file" id="inputImportar" accept="application/json,.json" hidden>
-              <button type="button" class="btn btn-peligro btn-bloque" id="btnBorrarTodo">Borrar todos los datos</button>
+              <button type="button" class="btn btn-peligro btn-bloque" id="btnBorrarTodo">Borrar datos locales</button>
             </div>
           </div>
         </div>
 
         <div class="panel">
-          <div class="panel-head"><h2>C&oacute;mo funciona el almacenamiento</h2></div>
+          <div class="panel-head"><h2>C&oacute;mo se guardan los datos</h2></div>
           <div class="info-grid">
             <div class="info-card">
-              <h3>&#128190; Metadatos en localStorage</h3>
-              <p>Las listas de libros, tareas, anuncios, fotos y museos (t&iacute;tulos, fechas, autores) se guardan en <code>localStorage</code> con las claves <code>hemeroteca_*</code>. Son r&aacute;pidas y persisten al recargar.</p>
+              <h3>&#128421; Biblioteca y tareas en el servidor</h3>
+              <p>Los usuarios, libros, tareas, entregas, calificaciones y notificaciones viven en el API de la carpeta <code>servidor/</code>: base SQLite m&aacute;s archivos en disco. Se comparten entre todos los equipos y el servidor valida los permisos.</p>
             </div>
             <div class="info-card">
-              <h3>&#128451; Archivos en IndexedDB</h3>
-              <p>Los archivos binarios (Word, PDF, im&aacute;genes) se guardan en <code>IndexedDB</code>, que admite hasta <b>1 GB por archivo</b> mucho mejor que localStorage (limitado a ~5 MB). Los nombres de archivo apuntan al registro correspondiente en la base de archivos.</p>
+              <h3>&#128190; Preferencias y anuncios en este navegador</h3>
+              <p>El tema, el nombre del curso, los anuncios globales y por &aacute;rea, la galer&iacute;a de fotos y los museos se guardan en <code>localStorage</code> e <code>IndexedDB</code> de este navegador. Los anuncios son propios de cada equipo.</p>
             </div>
             <div class="info-card">
-              <h3>&#128190; Todo en este navegador</h3>
-              <p>Los datos son locales al dispositivo y navegador donde se usan. En otro equipo u otro navegador la hemeroteca estar&aacute; vac&iacute;a. Usa <b>Exportar copia completa</b> para respaldar y <b>Importar</b> para restoring en otro equipo.</p>
+              <h3>&#128451; Respaldos separados</h3>
+              <p>Los botones de esta p&aacute;gina exportan e importan solo los datos locales. Para respaldar libros, tareas y entregas, copia la carpeta <code>servidor/datos/</code> en el servidor (base SQLite y archivos).</p>
             </div>
           </div>
         </div>
@@ -511,7 +636,7 @@
     <footer class="foot">
       <span id="footTexto">BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO</span>
       <span class="foot-sep">&middot;</span>
-      <span>Datos guardados localmente en este navegador</span>
+      <span>Biblioteca y tareas en el servidor &middot; datos locales en este navegador</span>
     </footer>
   </div>
 </div>
@@ -596,13 +721,93 @@
   </div>
 </div>
 
+<!-- ============================================================
+     MODAL: CALIFICAR ENTREGA
+     ============================================================ -->
+<div class="modal" id="modalCalificar" hidden role="dialog" aria-modal="true" aria-labelledby="calificarTitulo">
+  <div class="modal-caja modal-pequena">
+    <div class="modal-head">
+      <div class="modal-head-txt">
+        <h3 id="calificarTitulo">Calificar entrega</h3>
+        <p id="calificarSub">&nbsp;</p>
+      </div>
+      <button type="button" class="btn-icono" id="calificarCerrar" aria-label="Cerrar">&#10005;</button>
+    </div>
+    <div class="modal-body modal-form">
+      <input type="hidden" id="calificarEntregaId">
+      <label class="campo" for="calificarNota">
+        <span class="campo-label">Calificaci&oacute;n (sobre <span id="calificarMax">20</span>)</span>
+        <input type="number" id="calificarNota" class="input" min="0" step="0.5" placeholder="Ej. 18">
+      </label>
+      <label class="campo" for="calificarEstado">
+        <span class="campo-label">Estado de la entrega</span>
+        <select id="calificarEstado" class="input">
+          <option value="entregada">Entregada</option>
+          <option value="en_revision">En revisi&oacute;n (solicitar correcci&oacute;n)</option>
+          <option value="calificada">Calificada</option>
+          <option value="fuera_de_plazo">Fuera de plazo</option>
+        </select>
+      </label>
+      <label class="campo" for="calificarObs">
+        <span class="campo-label">Observaciones y retroalimentaci&oacute;n</span>
+        <textarea id="calificarObs" class="input" rows="4" maxlength="2000" placeholder="Indica aciertos, errores y qu&eacute; debe corregir."></textarea>
+      </label>
+      <p class="login-error" id="calificarError" role="alert"></p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-soft" id="calificarCancelar">Cancelar</button>
+      <button type="button" class="btn btn-primario" id="calificarGuardar">Guardar calificaci&oacute;n</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: ENTREGAR TAREA (estudiante)
+     ============================================================ -->
+<div class="modal" id="modalEntrega" hidden role="dialog" aria-modal="true" aria-labelledby="entregaTitulo">
+  <div class="modal-caja modal-pequena">
+    <div class="modal-head">
+      <div class="modal-head-txt">
+        <h3 id="entregaTitulo">Entregar tarea</h3>
+        <p id="entregaSub">&nbsp;</p>
+      </div>
+      <button type="button" class="btn-icono" id="entregaCerrar" aria-label="Cerrar">&#10005;</button>
+    </div>
+    <div class="modal-body modal-form">
+      <input type="hidden" id="entregaTareaId">
+      <label class="campo" for="entregaArchivo">
+        <span class="campo-label">Archivo de tu entrega <b class="req">*</b></span>
+        <input type="file" id="entregaArchivo" class="input"
+               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png">
+        <small class="campo-ayuda">PDF, DOC, DOCX, JPG, JPEG o PNG. M&aacute;ximo <span id="entregaMaxMb">25</span> MB.</small>
+      </label>
+      <label class="campo" for="entregaComentario">
+        <span class="campo-label">Comentario para el docente</span>
+        <textarea id="entregaComentario" class="input" rows="3" maxlength="1000" placeholder="Opcional"></textarea>
+      </label>
+      <p class="login-error" id="entregaError" role="alert"></p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-soft" id="entregaCancelar">Cancelar</button>
+      <button type="button" class="btn btn-primario" id="entregaEnviar">Enviar entrega</button>
+    </div>
+  </div>
+</div>
+
 <!-- Notificaciones -->
 <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
 
 <!-- Socket.IO es opcional: script.js funciona aunque el CDN o el backend no estén disponibles. -->
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<!-- Configuración generada desde .env: solo hashes, nunca contraseñas en texto plano. -->
+<!-- Configuración del API: URL pública del servidor (nunca credenciales). -->
 <script src="config.js"></script>
+<!-- Lector de PDF copiado al proyecto: sin CDN ni conexión obligatoria. -->
+<script src="vendor/pdfjs/pdf.min.js"></script>
+<script src="js/api.js"></script>
+<script src="js/clasificador.js"></script>
+<script src="js/pdf-texto.js"></script>
+<script src="js/biblioteca-ui.js"></script>
+<script src="js/tareas-ui.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

@@ -161,11 +161,36 @@ export function listarTareas({ almacen }, usuario, { area, estado, q } = {}) {
 
   let lista = filas.map((fila) => mapTarea(fila, usuario));
 
+  // La lista también lleva los adjuntos para que las tarjetas puedan
+  // mostrarlos y descargarlos sin pedir el detalle de cada tarea.
+  for (const tarea of lista) {
+    tarea.adjuntos = adjuntosDeTarea(almacen, tarea.id);
+  }
+
   if (!esDocente && estado) {
     lista = lista.filter((t) => t.estado === estado);
   }
 
   return lista;
+}
+
+/** Adjuntos de una tarea, con los datos del archivo listos para descargar. */
+function adjuntosDeTarea(almacen, tareaId) {
+  return almacen.todos(
+    `SELECT a.id, a.titulo, a.tipo, f.nombre_original, f.mime, f.tamano
+       FROM tarea_adjuntos a
+       JOIN archivos f ON f.id = a.archivo_id
+      WHERE a.tarea_id = ?
+      ORDER BY a.creado_en`,
+    tareaId,
+  ).map((f) => ({
+    id: f.id,
+    titulo: f.titulo,
+    tipo: f.tipo,
+    nombre: f.nombre_original,
+    mime: f.mime,
+    tamano: f.tamano,
+  }));
 }
 
 /** Tarea completa con adjuntos y, para el estudiante, su propia entrega. */
@@ -183,21 +208,7 @@ export function obtenerTarea({ almacen }, usuario, id) {
   }
 
   const tarea = mapTarea(fila, usuario);
-  tarea.adjuntos = almacen.todos(
-    `SELECT a.id, a.titulo, a.tipo, f.nombre_original, f.mime, f.tamano
-       FROM tarea_adjuntos a
-       JOIN archivos f ON f.id = a.archivo_id
-      WHERE a.tarea_id = ?
-      ORDER BY a.creado_en`,
-    id,
-  ).map((f) => ({
-    id: f.id,
-    titulo: f.titulo,
-    tipo: f.tipo,
-    nombre: f.nombre_original,
-    mime: f.mime,
-    tamano: f.tamano,
-  }));
+  tarea.adjuntos = adjuntosDeTarea(almacen, id);
 
   return tarea;
 }

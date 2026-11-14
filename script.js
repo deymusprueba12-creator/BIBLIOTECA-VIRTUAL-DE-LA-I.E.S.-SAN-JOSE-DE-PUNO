@@ -14,11 +14,13 @@
 
 /* =====================================================================
    BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO — Lógica de la aplicación
-   HTML + CSS + JavaScript puro. Sin frameworks, sin backend, sin CDN.
+   HTML + CSS + JavaScript puro.
 
    Almacenamiento:
-     · localStorage  -> metadatos (libros, tareas, anuncios, fotos, museos)
-     · IndexedDB     -> archivos binarios (Word, PDF, imágenes) hasta 1 GB
+     · Servidor Node (carpeta servidor/) -> libros, tareas, entregas,
+       calificaciones, notificaciones, usuarios y archivos.
+     · localStorage -> anuncios globales y por área, fotos, museos y tema.
+   Los permisos se validan en el servidor; ocultar botones aquí es solo UX.
    ===================================================================== */
 
 'use strict';
@@ -72,10 +74,12 @@ var CLAVES = {
 };
 
 var SECCIONES = {
-  inicio:  { titulo: 'Inicio',            sub: 'Resumen de la hemeroteca' },
+  inicio:  { titulo: 'Inicio',            sub: 'Resumen de la biblioteca' },
   areas:   { titulo: 'Áreas curriculares', sub: 'Anuncios organizados por área' },
-  libros:  { titulo: 'Libros',            sub: 'Material de lectura del curso' },
-  tareas:  { titulo: 'Tareas',            sub: 'Actividades y entregas' },
+  libros:  { titulo: 'Biblioteca',        sub: 'Libros clasificados por área curricular' },
+  tareas:  { titulo: 'Tareas y actividades', sub: 'Actividades, materiales y entregas' },
+  entregas: { titulo: 'Entregas',         sub: 'Trabajos enviados y su revisión' },
+  calificaciones: { titulo: 'Calificaciones', sub: 'Notas y retroalimentación' },
   anuncios: { titulo: 'Anuncios',         sub: 'Comunicados del docente' },
   fotos:   { titulo: 'Fotos',             sub: 'Galería de imágenes' },
   museos:  { titulo: 'Museos Virtuales',  sub: 'Recorridos y enlaces culturales' },
@@ -154,62 +158,24 @@ function hashRespaldo(cadena) {
 
 /** Comprueba si config.js existe y tiene las dos credenciales. */
 function authConfigurada() {
-  return !!(AUTH && AUTH.docente && AUTH.estudiante);
+  return !!(window.HEMEROTECA_API && window.HEMEROTECA_API.base);
 }
 
-/** Compara las credenciales escritas contra los hashes del rol indicado. */
-function credencialesCorrectas(rol, usuario, password) {
-  var datos = AUTH && AUTH[rol];
-  if (!datos) return Promise.resolve(false);
-
-  function porRespaldo() {
-    return hashRespaldo(usuario) === datos.usuarioRespaldo &&
-           hashRespaldo(password) === datos.passwordRespaldo;
-  }
-
-  try {
-    if (window.crypto && window.crypto.subtle && typeof window.TextEncoder !== 'undefined') {
-      return Promise.all([hashSha256(usuario), hashSha256(password)]).then(function (hashes) {
-        return hashes[0] === datos.usuarioHash && hashes[1] === datos.passwordHash;
-      }).catch(function () {
-        return porRespaldo();
-      });
-    }
-  } catch (e) { /* usa el respaldo */ }
-  return Promise.resolve(porRespaldo());
-}
-
-/* --- Token de sesión con rol y caducidad en sessionStorage --- */
-function leerTokenSesion() {
-  try {
-    var bruto = sessionStorage.getItem(CLAVES.token);
-    if (!bruto) return null;
-    var datos = JSON.parse(bruto);
-    if (!datos || !datos.rol || !datos.exp) return null;
-    return datos;
-  } catch (e) {
-    return null;
-  }
-}
-
+/* --- Sesión del servidor ------------------------------------------------
+   El token lo emite el API y se guarda en localStorage. El servidor solo
+   conserva su SHA-256 y comprueba el rol y la caducidad en cada petición. */
 function tokenSesionValido(rol) {
-  var datos = leerTokenSesion();
-  if (!datos) return false;
-  if (Date.now() >= Number(datos.exp)) return false;
-  if (rol && datos.rol !== rol) return false;
+  if (!window.HEMEROTECA_API || !window.HEMEROTECA_API.haySesion()) return false;
+  var usuario = estado.sesion && estado.sesion.rol ? estado.sesion : window.HEMEROTECA_API.usuarioGuardado();
+  if (!usuario || !usuario.rol) return false;
+  if (rol && usuario.rol !== rol) return false;
   return true;
 }
 
-function crearTokenSesion(rol) {
-  var token = { rol: rol, nonce: uid(), exp: Date.now() + DURACION_TOKEN_MS };
-  try { sessionStorage.setItem(CLAVES.token, JSON.stringify(token)); } catch (e) { /* sin sessionStorage */ }
-  return token;
-}
-
 function cerrarSesion() {
-  try { sessionStorage.removeItem(CLAVES.token); } catch (e) { /* sin sessionStorage */ }
-  try { localStorage.removeItem(CLAVES.sesion); } catch (e) { /* sin localStorage */ }
+  if (window.HEMEROTECA_API) window.HEMEROTECA_API.logout();
   estado.sesion = null;
+  try { localStorage.removeItem(CLAVES.sesion); } catch (e) { /* sin localStorage */ }
 }
 
 /** Persistencia del bloqueo para que no se evada recargando la página */
@@ -606,14 +572,16 @@ function guardarFotos()  { escribirClave(CLAVES.fotos, estado.fotos); }
 function guardarMuseos() { escribirClave(CLAVES.museos, estado.museos); }
 
 function cargarTodo() {
-  estado.libros = leerClave(CLAVES.libros, []);
-  estado.tareas = leerClave(CLAVES.tareas, []);
+  // Los libros, tareas, entregas y calificaciones vienen del servidor.
+  // Aquí solo se recupera lo que sigue siendo local a este navegador.
+  estado.libros = [];
+  estado.tareas = [];
   estado.avisos = leerClave(CLAVES.avisos, []);
   estado.avisosAreas = leerClave(CLAVES.avisosAreas, {});
   estado.fotos  = leerClave(CLAVES.fotos, []);
   estado.museos = leerClave(CLAVES.museos, []);
 
-  [estado.libros, estado.tareas, estado.avisos, estado.fotos, estado.museos].forEach(function (lista) {
+  [estado.avisos, estado.fotos, estado.museos].forEach(function (lista) {
     if (!Array.isArray(lista)) lista.length = 0;
   });
   if (!estado.avisosAreas || typeof estado.avisosAreas !== 'object' || Array.isArray(estado.avisosAreas)) {
@@ -631,7 +599,7 @@ function mostrarLogin(mensaje) {
   $('#loginScreen').classList.remove('oculto');
   document.body.dataset.rol = '';
   if (!mensaje && !authConfigurada()) {
-    mensaje = 'Falta config.js. Ejecuta "node scripts/generar-config.mjs" para generar las credenciales de demostración.';
+    mensaje = 'No se encontró la configuración del API. Revisa config.js y arranca el servidor de la carpeta servidor/.';
   }
   if (!mensaje && BLOQUEO.activo && Date.now() < BLOQUEO.hasta) {
     mensaje = 'Acceso bloqueado por ' + Math.max(0, Math.ceil((BLOQUEO.hasta - Date.now()) / 1000)) + ' segundos por demasiados intentos fallidos.';
@@ -666,7 +634,7 @@ function actualizarRolLogin(rol) {
 }
 
 function irAApp() {
-  // Verificación del token de sesión y del rol antes de abrir las páginas internas
+  // La sesión ya fue emitida y validada por el servidor.
   if (!estado.sesion || !tokenSesionValido(estado.sesion.rol)) {
     cerrarSesion();
     mostrarLogin('Debes iniciar sesión para continuar.');
@@ -679,7 +647,10 @@ function irAApp() {
   cargarTodo();
   renderTodo();
   irA('inicio');
-  pedirAlmacenamientoPersistente();
+
+  // Datos compartidos: se cargan del servidor después de pintar la interfaz.
+  if (window.BibliotecaUI) window.BibliotecaUI.cargar().catch(function () {});
+  if (window.TareasUI) window.TareasUI.cargarTodo();
 }
 
 function aplicarRolEnUI() {
@@ -692,8 +663,6 @@ function aplicarRolEnUI() {
   $('#avatarInicial').classList.toggle('estudiante', !esDocente());
   $('#marcaNombre').textContent = estado.config.nombre || NOMBRE_APP;
   $('#footTexto').textContent = (estado.config.nombre || NOMBRE_APP) + (estado.config.curso ? ' · ' + estado.config.curso : '');
-  $('#tituloSubirTarea').textContent = esDocente() ? 'Publicar tarea o subir entrega' : 'Subir mi tarea';
-  if ($('#tareaAutor') && !esDocente()) $('#tareaAutor').value = nombreUsuario();
 }
 
 function configurarLogin() {
@@ -739,55 +708,64 @@ function configurarLogin() {
     }
 
     if (!authConfigurada()) {
-      mostrarErrorLogin('Falta config.js. Ejecuta "node scripts/generar-config.mjs" para generar las credenciales de demostración.');
+      mostrarErrorLogin('No se encontró la configuración del API. Revisa config.js y arranca el servidor.');
       return;
     }
 
-    // Sanitiza las entradas antes de compararlas (evita inyección de HTML)
-    var u = sanitizar(inputUsuario.value);
-    var p = sanitizar(inputPassword.value);
+    var u = sanitizar(inputUsuario.value).trim();
+    var p = inputPassword.value;
     if (!u || !p) {
       mostrarErrorLogin('Escribe tu usuario y tu contraseña.');
       return;
     }
 
-    credencialesCorrectas(rolLoginActual, u, p).then(function (ok) {
-      if (!ok) {
-        intentosFallidos += 1;
-        if (intentosFallidos >= LIMITE_INTENTOS) {
-          intentosFallidos = 0;
-          BLOQUEO.activo = true;
-          BLOQUEO.hasta = Date.now() + (SEGUNDOS_BLOQUEO * 1000);
-          mostrarErrorLogin('Demasiados intentos fallidos. Acceso bloqueado por ' + SEGUNDOS_BLOQUEO + ' segundos.');
-        } else {
-          var restantes = LIMITE_INTENTOS - intentosFallidos;
-          mostrarErrorLogin('Usuario o contraseña incorrectos. ' +
-            (restantes === 1 ? 'Queda 1 intento.' : 'Quedan ' + restantes + ' intentos.'));
-        }
-        guardarEstadoBloqueo();
-        inputPassword.select();
+    var boton = $('#btnIngresar');
+    var textoOriginal = boton.textContent;
+    boton.disabled = true;
+    boton.textContent = 'Ingresando…';
+    mostrarErrorLogin('');
+
+    window.HEMEROTECA_API.login(u, p).then(function (datos) {
+      boton.disabled = false;
+      boton.textContent = textoOriginal;
+
+      // La pestaña elegida debe coincidir con el rol real de la cuenta.
+      if (datos.usuario.rol !== rolLoginActual) {
+        window.HEMEROTECA_API.logout();
+        estado.sesion = null;
+        mostrarErrorLogin('Esa cuenta es de ' +
+          (datos.usuario.rol === ROLES.DOCENTE ? 'docente' : 'estudiante') +
+          '. Elige la pestaña correcta e inténtalo de nuevo.');
         return;
       }
 
-      // Credenciales correctas: se reinicia el contador de fallos
       BLOQUEO.activo = false;
       BLOQUEO.hasta = 0;
       intentosFallidos = 0;
       guardarEstadoBloqueo();
       mostrarErrorLogin('');
 
-      var rol = rolLoginActual;
-      var token = crearTokenSesion(rol);
       estado.sesion = {
-        rol: rol,
-        usuario: u,
-        nombre: rol === ROLES.DOCENTE ? 'Docente' : (leerClave(CLAVES.perfil, {}).nombre || 'Estudiante'),
+        rol: datos.usuario.rol,
+        usuario: datos.usuario.usuario,
+        nombre: datos.usuario.nombre,
         fecha: ahora(),
-        token: token.nonce
+        expiraEn: datos.expiraEn
       };
       escribirClave(CLAVES.sesion, estado.sesion);
       irAApp();
-      toast('¡Bienvenido, ' + (rol === ROLES.DOCENTE ? 'Docente' : 'Estudiante') + '!', 'ok');
+      toast('¡Bienvenido, ' + datos.usuario.nombre + '!', 'ok');
+    }).catch(function (err) {
+      boton.disabled = false;
+      boton.textContent = textoOriginal;
+
+      if (err.estado === 429) {
+        BLOQUEO.activo = true;
+        BLOQUEO.hasta = Date.now() + (SEGUNDOS_BLOQUEO * 1000);
+        guardarEstadoBloqueo();
+      }
+      mostrarErrorLogin(err.message || 'No se pudo iniciar sesión.');
+      inputPassword.select();
     });
   }
 
@@ -1754,19 +1732,23 @@ function tarjetasDocumento(lista, opciones) {
    ===================================================================== */
 
 function renderInicio() {
-  var tareasVisibles = tareasDelUsuario();
+  var resumen = window.TareasUI ? window.TareasUI.resumen() : { entregas: 0, calificaciones: 0, porRevisar: 0 };
+  var totalAvisos = estado.avisos.length + totalAvisosAreas();
+
   var stats = [
     { ico: '📚', val: estado.libros.length, nom: 'Libros' },
-    { ico: '📝', val: tareasVisibles.length, nom: 'Tareas' },
-    { ico: '📢', val: estado.avisos.length, nom: 'Anuncios' },
-    { ico: '🖼️', val: estado.fotos.length, nom: 'Fotos' },
-    { ico: '🏛️', val: estado.museos.length, nom: 'Museos' }
+    { ico: '📝', val: estado.tareas.length, nom: esDocente() ? 'Tareas' : 'Tareas publicadas' },
+    { ico: '📢', val: totalAvisos, nom: 'Anuncios' }
   ];
+
   if (esDocente()) {
-    stats.push({ ico: '💾', val: formatearBytes(totalBytes()), nom: 'Archivos' });
+    stats.push({ ico: '📥', val: resumen.porRevisar, nom: 'Por revisar' });
+    stats.push({ ico: '🏅', val: resumen.calificaciones, nom: 'Calificaciones' });
   } else {
-    stats.push({ ico: '📤', val: estado.tareas.filter(function (t) { return t.autor === nombreUsuario(); }).length, nom: 'Mis entregas' });
+    stats.push({ ico: '📤', val: resumen.entregas, nom: 'Mis entregas' });
+    stats.push({ ico: '🏅', val: resumen.calificaciones, nom: 'Mis calificaciones' });
   }
+
   $('#statsGrid').innerHTML = stats.map(function (s) {
     return '<div class="stat"><span class="stat-ico">' + s.ico + '</span><div><div class="stat-val">' +
       esc(s.val) + '</div><div class="stat-nom">' + esc(s.nom) + '</div></div></div>';
@@ -1779,144 +1761,30 @@ function renderInicio() {
 }
 
 function renderBadges() {
+  // Los badges de biblioteca, tareas, entregas y calificaciones los actualizan
+  // sus módulos con los datos reales del servidor.
   $('#badgeLibros').textContent = estado.libros.length;
-  $('#badgeTareas').textContent = tareasDelUsuario().length;
-  $('#badgeAnuncios').textContent = estado.avisos.length;
+  $('#badgeTareas').textContent = estado.tareas.length;
+  $('#badgeAnuncios').textContent = estado.avisos.length + totalAvisosAreas();
   $('#badgeFotos').textContent = estado.fotos.length;
   $('#badgeMuseos').textContent = estado.museos.length;
-  $('#badgeAnuncios').classList.toggle('oculto', estado.avisos.length === 0);
+  $('#badgeAnuncios').classList.toggle('oculto', (estado.avisos.length + totalAvisosAreas()) === 0);
 }
 
 /* =====================================================================
-   17. RENDER — LIBROS
+   17. RENDER — BIBLIOTECA (delegado a js/biblioteca-ui.js)
    ===================================================================== */
-
-function categoriasDeLibros() {
-  var set = {};
-  estado.libros.forEach(function (l) { if (l.categoria) set[l.categoria] = true; });
-  return Object.keys(set).sort();
-}
-
-function renderFiltrosLibros() {
-  var cats = categoriasDeLibros();
-  var html = '<button type="button" class="filtro' + (estado.filtros.libro === 'todos' ? ' activo' : '') + '" data-filtro="todos">Todas</button>';
-  cats.forEach(function (c) {
-    html += '<button type="button" class="filtro' + (estado.filtros.libro === c ? ' activo' : '') + '" data-filtro="' + esc(c) + '">' + esc(c) + '</button>';
-  });
-  $('#filtrosCategoria').innerHTML = cats.length ? html : '';
-}
-
-function librosFiltrados() {
-  return estado.libros.filter(function (l) {
-    if (estado.filtros.libro !== 'todos' && l.categoria !== estado.filtros.libro) return false;
-    return true;
-  });
-}
 
 function renderLibros() {
-  renderFiltrosLibros();
-  var lista = librosFiltrados();
-  var accionesDoc = esDocente()
-    ? '<div class="acciones"><button type="button" class="btn btn-primario" data-ir="libros">Ir a subir libros</button></div>'
-    : '';
-  $('#gridLibros').innerHTML = tarjetasDocumento(lista, {
-    claveBusqueda: 'libro',
-    emojiVacio: '📚',
-    tituloVacio: 'La biblioteca está vacía',
-    textoVacio: esDocente()
-      ? 'Sube el primer libro en Word o PDF (hasta 1 GB) usando el formulario de arriba.'
-      : 'Todavía el docente no ha compartido libros. Vuelve más tarde.',
-    accionesVacias: accionesDoc,
-    permiteEditar: true,
-    permiteBorrarPropio: function () { return false; },
-    marcaDocente: function () { return false; },
-    etiqueta: function (r) { return r.autor ? r.autor : ''; },
-    claseEtiqueta: function () { return ''; }
-  });
-}
-
-function iniciarEdicionLibro(id) {
-  var libro = estado.libros.filter(function (l) { return l.id === id; })[0];
-  if (!libro) return;
-  // Limpia cualquier archivo pendiente para no confundirse con el libro editado
-  if (zonaLibro) zonaLibro.limpiarSilencioso();
-  estado.editandoLibro = id;
-  $('#libroTitulo').value = libro.titulo || '';
-  $('#libroAutor').value = libro.autor || '';
-  $('#libroCategoria').value = libro.categoria || '';
-  $('#libroDesc').value = libro.descripcion || '';
-  $('#btnGuardarLibro').textContent = 'Guardar cambios';
-  $('#avisoEdicionLibro').classList.remove('oculto');
-  $('#libroTitulo').focus();
-  $('#sec-libros').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function cancelarEdicionLibro() {
-  estado.editandoLibro = null;
-  $('#formLibro').reset();
-  $('#btnGuardarLibro').textContent = 'Guardar libro';
-  $('#avisoEdicionLibro').classList.add('oculto');
+  if (window.BibliotecaUI) window.BibliotecaUI.render();
 }
 
 /* =====================================================================
-   18. RENDER — TAREAS
+   18. RENDER — TAREAS (delegado a js/tareas-ui.js)
    ===================================================================== */
 
-function tareasDelUsuario() {
-  if (esDocente()) return estado.tareas;
-  if (estado.config.verTodasTareas) return estado.tareas;
-  return estado.tareas.filter(function (t) {
-    return t.ambito === 'actividad' || t.autor === nombreUsuario();
-  });
-}
-
-function tiposDeTarea() {
-  var set = {};
-  tareasDelUsuario().forEach(function (t) {
-    set[t.ambito === 'entrega' ? 'entregas' : 'actividades'] = true;
-  });
-  return Object.keys(set);
-}
-
-function renderFiltrosTarea() {
-  var tipos = tiposDeTarea();
-  if (!tipos.length) { $('#filtrosTarea').innerHTML = ''; return; }
-  var html = '<button type="button" class="filtro' + (estado.filtros.tarea === 'todos' ? ' activo' : '') + '" data-filtro="todos">Todas</button>';
-  html += '<button type="button" class="filtro' + (estado.filtros.tarea === 'actividades' ? ' activo' : '') + '" data-filtro="actividades">Actividades</button>';
-  if (tipos.indexOf('entregas') !== -1) {
-    html += '<button type="button" class="filtro' + (estado.filtros.tarea === 'entregas' ? ' activo' : '') + '" data-filtro="entregas">Entregas</button>';
-  }
-  $('#filtrosTarea').innerHTML = html;
-}
-
 function renderTareas() {
-  renderFiltrosTarea();
-  var lista = tareasDelUsuario().filter(function (t) {
-    if (estado.filtros.tarea === 'actividades' && t.ambito === 'entrega') return false;
-    if (estado.filtros.tarea === 'entregas' && t.ambito !== 'entrega') return false;
-    return true;
-  });
-
-  var accionesDoc = esDocente()
-    ? '<div class="acciones"><button type="button" class="btn btn-primario" data-ir="tareas">Ir a subir tareas</button></div>'
-    : '';
-
-  $('#gridTareas').innerHTML = tarjetasDocumento(lista, {
-    claveBusqueda: 'tarea',
-    emojiVacio: '📝',
-    tituloVacio: 'Aún no hay tareas',
-    textoVacio: esDocente()
-      ? 'Publica una actividad o sube una entrega usando el formulario de arriba.'
-      : 'Sube tu tarea en foto, Word o PDF usando el formulario de arriba.',
-    accionesVacias: accionesDoc,
-    permiteEditar: false,
-    marcaDocente: function (r) { return r.ambito === 'actividad'; },
-    etiqueta: function (r) { return r.ambito === 'entrega' ? (r.autor || 'Entrega') : 'Actividad'; },
-    claseEtiqueta: function (r) { return r.ambito === 'actividad' ? 'tag-naranja' : 'tag-verde'; },
-    permiteBorrarPropio: function (r) {
-      return !esDocente() && estado.config.borrarTareaEstudiante === true && r.autor === nombreUsuario();
-    }
-  });
+  if (window.TareasUI) window.TareasUI.render();
 }
 
 /* =====================================================================
@@ -2144,9 +2012,9 @@ function abrirMuseoExterno(id, incrustar) {
    ===================================================================== */
 
 function totalBytes() {
+  // Los libros, tareas y entregas se guardan en el servidor; aquí solo se
+  // contabilizan las imágenes de la galería, que siguen en este navegador.
   var suma = 0;
-  estado.libros.forEach(function (r) { suma += Number(r.tamano) || 0; });
-  estado.tareas.forEach(function (r) { suma += Number(r.tamano) || 0; });
   estado.fotos.forEach(function (r) { suma += Number(r.tamano) || 0; });
   return suma;
 }
@@ -2160,8 +2028,9 @@ function aplicarConfigEnUI() {
   $('#cfgVerTodas').checked = c.verTodasTareas === true;
   $('#cfgVerAnuncios').checked = c.borrarAvisosEstudiante === true;
   var limite = formatearBytes(c.limite);
-  $('#chipMaxLibro').textContent = limite;
-  $('#chipMaxTarea').textContent = limite;
+  var maxApi = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 25;
+  $('#chipMaxLibro').textContent = maxApi + ' MB';
+  $('#chipMaxTarea').textContent = maxApi;
   $('#chipMaxFoto').textContent = limite;
   $('#marcaNombre').textContent = c.nombre || NOMBRE_APP;
   $('#footTexto').textContent = (c.nombre || NOMBRE_APP) + (c.curso ? ' · ' + c.curso : '');
@@ -2181,16 +2050,14 @@ function infoAlmacenamiento() {
 function renderAlmacenamiento() {
   return infoAlmacenamiento().then(function (info) {
     var pct = Math.max(info.pct, 0);
-    $('#almacenMiniBarra').style.width = pct.toFixed(1) + '%';
-    $('#almacenTxt').textContent = formatearBytes(info.uso) + (info.cuota ? ' de ' + formatearBytes(info.cuota) : '');
+    var local = totalBytes();
+    $('#almacenMiniBarra').style.width = Math.min(100, pct).toFixed(1) + '%';
+    $('#almacenTxt').textContent = formatearBytes(local) + (info.cuota ? ' de ' + formatearBytes(info.cuota) : '');
     $('#almacenBarra').style.width = Math.min(100, pct).toFixed(1) + '%';
 
-    var nota;
-    if (info.cuota) {
-      nota = 'Tus ' + formatearBytes(totalBytes()) + ' de archivos ocupan el ' + pct.toFixed(1) + '% del espacio disponible en este navegador.';
-    } else {
-      nota = 'Archivos guardados: ' + formatearBytes(totalBytes()) + '. El navegador no informa la cuota total.';
-    }
+    var nota = 'Fotos, anuncios y preferencias: ' + formatearBytes(info.uso) +
+      (info.cuota ? ' de ' + formatearBytes(info.cuota) + ' (' + pct.toFixed(1) + '%)' : '') +
+      ' en este navegador. Los libros, tareas y entregas se guardan en el servidor.';
     if (navigator.storage && navigator.storage.persisted) {
       navigator.storage.persisted().then(function (ok) {
         $('#almacenNota').textContent = nota + (ok ? ' Almacenamiento permanente activo.' : '');
@@ -2198,7 +2065,7 @@ function renderAlmacenamiento() {
     } else {
       $('#almacenNota').textContent = nota;
     }
-    $('#almacenMiniTxt').textContent = formatearBytes(info.uso);
+    $('#almacenMiniTxt').textContent = formatearBytes(local);
     $('#almacenMiniNota').textContent = nota;
     return info;
   }).catch(function () { return null; });
@@ -2239,6 +2106,8 @@ function renderSeccion(seccion) {
     case 'areas': renderAreas(); break;
     case 'libros': renderLibros(); break;
     case 'tareas': renderTareas(); break;
+    case 'entregas': if (window.TareasUI) window.TareasUI.renderEntregas(); break;
+    case 'calificaciones': if (window.TareasUI) window.TareasUI.renderCalificaciones(); break;
     case 'anuncios': renderAvisos(); break;
     case 'fotos': renderFotos(); break;
     case 'museos': renderMuseos(); break;
@@ -2248,280 +2117,29 @@ function renderSeccion(seccion) {
 
 function renderTodo() {
   renderBadges();
-  renderSeccion(estado.seccion);
   renderLibros();
   renderTareas();
   renderAvisos();
   renderAreas();
   renderFotos();
   renderMuseos();
-  if (estado.seccion === 'inicio') { renderInicio(); renderAlmacenamiento(); }
-  if (estado.seccion === 'ajustes') renderAjustes();
+  renderSeccion(estado.seccion);
 }
 
 /* =====================================================================
-   24. ACCIONES: LIBROS
+   24. ACCIONES: BIBLIOTECA Y TAREAS (delegadas a los módulos)
    ===================================================================== */
 
-var zonaLibro = null;
-
+/* El formulario, la clasificación, la edición y la descarga de libros
+   viven en js/biblioteca-ui.js. Aquí solo se conectan al arranque. */
 function configurarLibros() {
-  zonaLibro = crearZonaArchivo({
-    drop: '#dropLibro',
-    input: '#inputLibro',
-    txt: '#dropLibroTxt',
-    info: '#dropLibroInfo',
-    textoPorDefecto: 'Arrastra el archivo aquí o haz clic para elegir',
-    infoPorDefecto: '.doc · .docx · .pdf',
-    alLimpiar: cancelarEdicionLibro
-  });
-
-  $('#formLibro').addEventListener('submit', function (e) {
-    e.preventDefault();
-    if (!esDocente()) { toast('Solo el docente puede manage libros.', 'alerta'); return; }
-
-    var archivos = zonaLibro.archivos();
-    var titulo = $('#libroTitulo').value.trim();
-    var autor = $('#libroAutor').value.trim();
-    var categoria = $('#libroCategoria').value.trim();
-    var descripcion = $('#libroDesc').value.trim();
-
-    if (!titulo) { toast('Escribe el título del libro.', 'alerta'); $('#libroTitulo').focus(); return; }
-
-    // --- Edición de metadatos (sin cambiar el archivo) ---
-    if (estado.editandoLibro) {
-      var libro = estado.libros.filter(function (l) { return l.id === estado.editandoLibro; })[0];
-      if (!libro) { cancelarEdicionLibro(); return; }
-      if (archivos.length) {
-        var errorArchivo = validarArchivo(archivos[0], EXT_LIBROS);
-        if (errorArchivo) { toast(errorArchivo, 'error', 7000); return; }
-      }
-      var cambios = { titulo: titulo, autor: autor, categoria: categoria, descripcion: descripcion, modificado: ahora() };
-      if (archivos.length) {
-        cambios.nombre = archivos[0].name;
-        cambios.tamano = archivos[0].size;
-        cambios.mime = mimeDe(archivos[0].name);
-      }
-      progresoMostrar('Actualizando libro…', 'Guardando los cambios.');
-      if (archivos.length) {
-        var nuevoId = uid();
-        archivoGuardar({ id: nuevoId, nombre: archivos[0].name, mime: cambios.mime, tamano: archivos[0].size, fecha: ahora(), blob: archivos[0] })
-          .then(function () {
-            var viejo = libro.archivoId;
-            Object.keys(cambios).forEach(function (k) { libro[k] = cambios[k]; });
-            libro.archivoId = nuevoId;
-            guardarLibros();
-            return archivoBorrar(viejo);
-          })
-          .then(function () { finalizarEdicion(); })
-          .catch(function (err) { progresoOcultar(); console.error(err); toast('No se pudo actualizar el libro: ' + err.message, 'error', 7000); });
-        return;
-      }
-      Object.keys(cambios).forEach(function (k) { libro[k] = cambios[k]; });
-      guardarLibros();
-      finalizarEdicion();
-      return;
-    }
-
-    // --- Libro nuevo ---
-    if (!archivos.length) { toast('Selecciona un archivo Word o PDF.', 'alerta'); return; }
-    var err = validarArchivo(archivos[0], EXT_LIBROS);
-    if (err) { toast(err, 'error', 7000); return; }
-
-    var archivo = archivos[0];
-    var archivoId = uid();
-    progresoMostrar('Subiendo libro…', 'Guardando "' + archivo.name + '" (' + formatearBytes(archivo.size) + ').');
-
-    archivoGuardar({
-      id: archivoId, nombre: archivo.name, mime: mimeDe(archivo.name),
-      tamano: archivo.size, fecha: ahora(), blob: archivo
-    }).then(function () {
-      estado.libros.unshift({
-        id: uid(), titulo: titulo, autor: autor, categoria: categoria,
-        descripcion: descripcion, nombre: archivo.name, mime: mimeDe(archivo.name),
-        tamano: archivo.size, archivoId: archivoId, fecha: ahora(), subidoPor: nombreUsuario()
-      });
-      guardarLibros();
-      finalizarEdicion();
-      toast('Libro «' + titulo + '» agregado a la biblioteca.', 'ok');
-      renderAlmacenamiento();
-    }).catch(function (e) {
-      progresoOcultar();
-      console.error(e);
-      toast('No se pudo guardar el archivo: ' + (e && e.message ? e.message : 'error desconocido'), 'error', 8000);
-    });
-  });
-
-  $('#btnCancelarEdicion').addEventListener('click', cancelarEdicionLibro);
-  $('#btnLimpiarLibro').addEventListener('click', function () { setTimeout(cancelarEdicionLibro, 0); });
-
-  $('#buscarLibro').addEventListener('input', function () { estado.busqueda.libro = this.value.trim(); renderLibros(); });
-
-  $('#filtrosCategoria').addEventListener('click', function (e) {
-    var btn = e.target.closest('.filtro');
-    if (!btn) return;
-    estado.filtros.libro = btn.getAttribute('data-filtro');
-    renderLibros();
-  });
-
-  $('#gridLibros').addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-accion]');
-    if (!btn) return;
-    var tarjeta = btn.closest('.card');
-    if (!tarjeta) return;
-    var id = tarjeta.getAttribute('data-id');
-    var accion = btn.getAttribute('data-accion');
-    var libro = estado.libros.filter(function (l) { return l.id === id; })[0];
-    if (!libro) return;
-    if (accion === 'ver') abrirVisor(libro);
-    else if (accion === 'descargar') descargarRegistro(libro);
-    else if (accion === 'editar' && esDocente()) iniciarEdicionLibro(id);
-    else if (accion === 'eliminar' && esDocente()) {
-      confirmar('Eliminar libro', 'Se eliminará «' + libro.titulo + '» y su archivo. Esta acción no se puede deshacer.', 'Eliminar', true)
-        .then(function (ok) {
-          if (!ok) return;
-          archivoBorrar(libro.archivoId).catch(function () { /* ya no estaba */ });
-          estado.libros = estado.libros.filter(function (l) { return l.id !== id; });
-          guardarLibros();
-          if (estado.editandoLibro === id) cancelarEdicionLibro();
-          renderTodo();
-          renderAlmacenamiento();
-          toast('Libro eliminado.', 'ok');
-        });
-    }
-  });
+  if (window.BibliotecaUI) window.BibliotecaUI.configurar();
 }
 
-function finalizarEdicion() {
-  progresoOcultar();
-  zonaLibro.limpiar();
-  $('#formLibro').reset();
-  estado.editandoLibro = null;
-  $('#btnGuardarLibro').textContent = 'Guardar libro';
-  $('#avisoEdicionLibro').classList.add('oculto');
-  renderTodo();
-}
-
-/* =====================================================================
-   25. ACCIONES: TAREAS
-   ===================================================================== */
-
-var zonaTarea = null;
-
+/* Tareas, entregas, calificaciones y notificaciones viven en
+   js/tareas-ui.js; los permisos reales se validan en el servidor. */
 function configurarTareas() {
-  zonaTarea = crearZonaArchivo({
-    drop: '#dropTarea',
-    input: '#inputTarea',
-    txt: '#dropTareaTxt',
-    info: '#dropTareaInfo',
-    textoPorDefecto: 'Arrastra tu tarea aquí o haz clic para elegir',
-    infoPorDefecto: '.jpg · .png · .doc · .docx · .pdf'
-  });
-
-  $('#formTarea').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var archivos = zonaTarea.archivos();
-    var titulo = $('#tareaTitulo').value.trim();
-    var materia = $('#tareaMateria').value.trim();
-    var descripcion = $('#tareaDesc').value.trim();
-    var radio = document.querySelector('input[name="tareaAmbito"]:checked');
-    var ambito = esDocente() ? (radio ? radio.value : 'actividad') : 'entrega';
-
-    if (!titulo) { toast('Escribe el título de la tarea.', 'alerta'); $('#tareaTitulo').focus(); return; }
-    if (!archivos.length) { toast('Selecciona el archivo de la tarea.', 'alerta'); return; }
-
-    var errores = [];
-    var validos = [];
-    archivos.forEach(function (f) {
-      var err = validarArchivo(f, EXT_TAREAS);
-      if (err) errores.push(err); else validos.push(f);
-    });
-    if (!validos.length) { toast(errores[0], 'error', 7000); return; }
-
-    var autorEstudiante = $('#tareaAutor') ? $('#tareaAutor').value.trim() : '';
-    var nombreAutor = esDocente() ? 'Docente' : (autorEstudiante || nombreUsuario());
-    if (!esDocente() && autorEstudiante) {
-      escribirClave(CLAVES.perfil, { nombre: autorEstudiante });
-      estado.sesion.nombre = autorEstudiante;
-      escribirClave(CLAVES.sesion, estado.sesion);
-    }
-
-    progresoMostrar('Subizando tarea…', validos.length === 1
-      ? 'Guardando «' + validos[0].name + '» (' + formatearBytes(validos[0].size) + ').'
-      : 'Guardando ' + validos.length + ' archivos.');
-
-    var nuevas = [];
-
-    Promise.all(validos.map(function (f) {
-      var archivoId = uid();
-      return archivoGuardar({ id: archivoId, nombre: f.name, mime: mimeDe(f.name), tamano: f.size, fecha: ahora(), blob: f })
-        .then(function () {
-          return {
-            id: uid(),
-            titulo: validos.length > 1 ? titulo + ' (' + f.name + ')' : titulo,
-            materia: materia, descripcion: descripcion, ambito: ambito,
-            autor: nombreAutor, nombre: f.name, mime: mimeDe(f.name), tamano: f.size,
-            archivoId: archivoId, fecha: ahora(), subidoPor: nombreUsuario()
-          };
-        });
-    })).then(function (creadas) {
-      nuevas = creadas;
-      estado.tareas = nuevas.concat(estado.tareas);
-      guardarTareas();
-      progresoOcultar();
-      zonaTarea.limpiar();
-      $('#formTarea').reset();
-      if ($('#tareaAutor')) $('#tareaAutor').value = nombreUsuario();
-      renderTodo();
-      renderAlmacenamiento();
-      toast(validos.length === 1 ? 'Tarea «' + titulo + '» guardada.' : validos.length + ' archivos guardados.', 'ok');
-      if (errores.length) toast(errores.join(' '), 'alerta', 8000);
-    }).catch(function (err) {
-      progresoOcultar();
-      console.error(err);
-      toast('No se pudo guardar la tarea: ' + (err && err.message ? err.message : 'error desconocido'), 'error', 8000);
-    });
-  });
-
-  $('#buscarTarea').addEventListener('input', function () { estado.busqueda.tarea = this.value.trim(); renderTareas(); });
-
-  $('#filtrosTarea').addEventListener('click', function (e) {
-    var btn = e.target.closest('.filtro');
-    if (!btn) return;
-    estado.filtros.tarea = btn.getAttribute('data-filtro');
-    renderTareas();
-  });
-
-  $('#gridTareas').addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-accion]');
-    if (!btn) return;
-    var tarjeta = btn.closest('.card');
-    if (!tarjeta) return;
-    var id = tarjeta.getAttribute('data-id');
-    var accion = btn.getAttribute('data-accion');
-    var tarea = estado.tareas.filter(function (t) { return t.id === id; })[0];
-    if (!tarea) return;
-
-    if (accion === 'ver') abrirVisor(tarea);
-    else if (accion === 'descargar') descargarRegistro(tarea);
-    else if (accion === 'eliminar') {
-      var propio = tarea.autor === nombreUsuario();
-      if (!esDocente() && !(estado.config.borrarTareaEstudiante === true && propio)) {
-        toast('No tienes permiso para eliminar esta tarea.', 'alerta');
-        return;
-      }
-      confirmar('Eliminar tarea', 'Se eliminará «' + tarea.titulo + '» y su archivo. Esta acción no se puede deshacer.', 'Eliminar', true)
-        .then(function (ok) {
-          if (!ok) return;
-          archivoBorrar(tarea.archivoId).catch(function () { /* ya no estaba */ });
-          estado.tareas = estado.tareas.filter(function (t) { return t.id !== id; });
-          guardarTareas();
-          renderTodo();
-          renderAlmacenamiento();
-          toast('Tarea eliminada.', 'ok');
-        });
-    }
-  });
+  if (window.TareasUI) window.TareasUI.configurar();
 }
 
 /* =====================================================================
@@ -2863,20 +2481,23 @@ function nombreRespaldo(sufijo) {
 }
 
 function exportarMetadatos() {
+  // Los libros, tareas, entregas y calificaciones viven en el servidor y se
+  // respaldan desde allí (servidor/datos). Este archivo solo contiene los
+  // datos que siguen en este navegador.
   var datos = {
     formato: 'hemeroteca-backup',
-    version: 1,
+    version: 2,
     conArchivos: false,
+    soloLocal: true,
     generado: ahora(),
     config: estado.config,
-    libros: estado.libros,
-    tareas: estado.tareas,
     avisos: estado.avisos,
+    avisosAreas: estado.avisosAreas,
     fotos: estado.fotos,
     museos: estado.museos
   };
   descargar(nombreRespaldo('metadatos'), JSON.stringify(datos, null, 2), 'application/json');
-  toast('Respaldo de metadatos descargado.', 'ok');
+  toast('Respaldo local descargado. Los libros y tareas se respaldan en el servidor.', 'ok', 7000);
 }
 
 function exportarCompleto() {
@@ -2893,7 +2514,7 @@ function exportarCompleto() {
       if (!ok) return;
       progresoMostrar('Generando respaldo…', 'Codificando archivos…');
       var archivos = [];
-      [].concat(estado.libros, estado.tareas, estado.fotos).forEach(function (r) {
+      estado.fotos.forEach(function (r) {
         if (r.archivoId && archivos.indexOf(r.archivoId) === -1) archivos.push(r.archivoId);
       });
 
@@ -2912,13 +2533,13 @@ function exportarCompleto() {
       })).then(function (lista) {
         var datos = {
           formato: 'hemeroteca-backup',
-          version: 1,
+          version: 2,
           conArchivos: true,
+          soloLocal: true,
           generado: ahora(),
           config: estado.config,
-          libros: estado.libros,
-          tareas: estado.tareas,
           avisos: estado.avisos,
+          avisosAreas: estado.avisosAreas,
           fotos: estado.fotos,
           museos: estado.museos,
           archivos: lista.filter(Boolean)
@@ -2959,18 +2580,20 @@ function importarRespaldo(datos) {
     }
     return null;
   }).then(function () {
-    estado.libros = Array.isArray(datos.libros) ? datos.libros : [];
-    estado.tareas = Array.isArray(datos.tareas) ? datos.tareas : [];
     estado.avisos = Array.isArray(datos.avisos) ? datos.avisos : [];
+    estado.avisosAreas = datos.avisosAreas && typeof datos.avisosAreas === 'object' && !Array.isArray(datos.avisosAreas)
+      ? datos.avisosAreas : {};
     estado.fotos = Array.isArray(datos.fotos) ? datos.fotos : [];
     estado.museos = Array.isArray(datos.museos) ? datos.museos : [];
-    guardarLibros(); guardarTareas(); guardarAvisos(); guardarFotos(); guardarMuseos();
+    guardarAvisos(); guardarAvisosAreas(); guardarFotos(); guardarMuseos();
     estado.config = cargarConfig();
     progresoOcultar();
     aplicarConfigEnUI();
     renderTodo();
     renderAlmacenamiento();
-    toast('Respaldo importado correctamente.', 'ok', 6000);
+    if (window.BibliotecaUI) window.BibliotecaUI.cargar().catch(function () {});
+    if (window.TareasUI) window.TareasUI.cargarTodo();
+    toast('Respaldo local importado. Los libros y tareas se mantienen en el servidor.', 'ok', 7000);
   }).catch(function (err) {
     progresoOcultar();
     console.error(err);
@@ -2983,6 +2606,12 @@ function importarRespaldo(datos) {
    ===================================================================== */
 
 function configurarGlobales() {
+  document.addEventListener('hemeroteca:sesion-expirada', function () {
+    estado.sesion = null;
+    cerrarSesion();
+    mostrarLogin('Tu sesión expiró. Vuelve a iniciar sesión.');
+  });
+
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       if (!$('#modalConfirmar').hasAttribute('hidden')) { cerrarConfirmar(false); return; }
@@ -3041,8 +2670,14 @@ function iniciar() {
   configurarAjustes();
   configurarGlobales();
 
-  // Reanudar sesión solo si hay token válido y datos de sesión con el mismo rol
+  // Reanudar sesión: el token vive en localStorage y el servidor lo valida.
   var sesion = leerClave(CLAVES.sesion, null);
+  if (!sesion && window.HEMEROTECA_API) {
+    var guardado = window.HEMEROTECA_API.usuarioGuardado();
+    if (guardado && guardado.rol) {
+      sesion = { rol: guardado.rol, usuario: guardado.usuario, nombre: guardado.nombre };
+    }
+  }
   var sesionValida = sesion &&
     (sesion.rol === ROLES.DOCENTE || sesion.rol === ROLES.ESTUDIANTE) &&
     tokenSesionValido(sesion.rol);
@@ -3051,7 +2686,6 @@ function iniciar() {
     irAApp();
   } else {
     // Sin token válido no se permite el acceso a las páginas internas
-    try { sessionStorage.removeItem(CLAVES.token); } catch (e) { /* sin sessionStorage */ }
     try { localStorage.removeItem(CLAVES.sesion); } catch (e) { /* sin localStorage */ }
     mostrarLogin('');
   }

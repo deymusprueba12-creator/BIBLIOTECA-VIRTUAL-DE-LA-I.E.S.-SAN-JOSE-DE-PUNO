@@ -208,10 +208,14 @@ export function calificarEntrega({ almacen }, usuario, id, datos) {
   );
   if (!fila) throw new ErrorHttp(404, 'La entrega no existe.');
 
-  const estado = ESTADOS.includes(datos.estado) ? datos.estado : fila.estado;
+  let estado = ESTADOS.includes(datos.estado) ? datos.estado : fila.estado;
   const calificacion = datos.calificacion !== undefined
     ? numeroOpcionalEntre(datos.calificacion, 'calificación', 0, fila.puntaje_maximo)
     : fila.calificacion;
+
+  // Si se asigna una nota, la entrega pasa a «Calificada» aunque el cliente
+  // no lo pida de forma explícita. Sin nota, se respeta el estado recibido.
+  if (calificacion !== null && estado === 'entregada') estado = 'calificada';
   const observaciones = datos.observaciones !== undefined
     ? textoOpcional(datos.observaciones, 4000)
     : fila.observaciones;
