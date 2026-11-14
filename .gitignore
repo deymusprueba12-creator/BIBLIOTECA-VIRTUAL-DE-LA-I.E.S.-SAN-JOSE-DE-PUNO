@@ -10,3 +10,9 @@ config.js
 node_modules/
 .DS_Store
 Thumbs.db
+
+# Datos locales del servidor: base SQLite y archivos subidos.
+servidor/datos/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

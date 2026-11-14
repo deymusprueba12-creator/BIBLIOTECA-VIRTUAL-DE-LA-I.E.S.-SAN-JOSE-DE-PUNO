@@ -1,0 +1,16 @@
+{
+  "name": "biblioteca-virtual-servidor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API de la BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO. Node sin dependencias externas.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {}
+}
