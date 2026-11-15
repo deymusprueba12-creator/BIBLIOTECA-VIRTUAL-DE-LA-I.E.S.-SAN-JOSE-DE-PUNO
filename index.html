@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="claro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="description" content="BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO: biblioteca digital para docentes y estudiantes con libros, tareas, anuncios, fotos y museos virtuales.">
+<title>BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%234f46e5'/><text x='32' y='46' font-size='32' font-family='Arial' font-weight='bold' fill='%23ffffff' text-anchor='middle'>H</text></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<noscript>
+  <div class="noscript">Esta aplicaci&oacute;n necesita JavaScript activado para funcionar.</div>
+</noscript>
+
+<!-- ============================================================
+     PANTALLA DE INICIO DE SESI&Oacute;N &Uacute;NICA
+     ============================================================ -->
+<div class="login-wrap" id="loginScreen">
+  <div class="login-bg" aria-hidden="true"></div>
+
+  <div class="login-card" role="region" aria-labelledby="loginTitulo">
+    <div class="login-brand">
+      <div class="login-logo" aria-hidden="true">&#128218;</div>
+      <h1 id="loginTitulo">BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO</h1>
+      <p class="login-sub">Tu biblioteca y aula digital</p>
+    </div>
+
+    <div class="login-roles" role="tablist" aria-label="Selecciona tu rol">
+      <button type="button" class="login-rol activo" id="rolDocente" role="tab"
+              aria-selected="true" aria-controls="loginForm" data-login-rol="docente">
+        <span aria-hidden="true">&#128104;&#8205;&#127979;</span> Docente
+      </button>
+      <button type="button" class="login-rol" id="rolEstudiante" role="tab"
+              aria-selected="false" aria-controls="loginForm" data-login-rol="estudiante">
+        <span aria-hidden="true">&#127891;</span> Estudiante
+      </button>
+    </div>
+    <p class="login-rol-nota" id="loginRolNota">Ingresa con tu cuenta de docente.</p>
+
+    <form id="loginForm" class="login-form" autocomplete="on" novalidate>
+      <label class="campo" for="loginUsuario">
+        <span class="campo-label">Usuario</span>
+        <span class="input-wrap">
+          <span class="input-icon" aria-hidden="true">&#128100;</span>
+          <input type="text" id="loginUsuario" name="username" class="input"
+                 placeholder="Escribe tu usuario" autocomplete="username"
+                 spellcheck="false" autocapitalize="none" required>
+        </span>
+      </label>
+
+      <label class="campo" for="loginPassword">
+        <span class="campo-label">Contrase&ntilde;a</span>
+        <span class="input-wrap">
+          <span class="input-icon" aria-hidden="true">&#128273;</span>
+          <input type="password" id="loginPassword" name="password" class="input"
+                 placeholder="Escribe tu contraseña" autocomplete="current-password" required>
+          <button type="button" class="btn-ojo" id="togglePass"
+                  aria-label="Mostrar contraseña" title="Mostrar contraseña">&#128065;</button>
+        </span>
+      </label>
+
+      <p class="login-error" id="loginError" role="alert" aria-live="assertive"></p>
+
+      <button type="submit" class="btn btn-primario btn-bloque btn-grande" id="btnIngresar">
+        Ingresar
+      </button>
+    </form>
+
+    <p class="login-foot">Proyecto educativo &middot; HTML + CSS + JavaScript &middot; API propio en Node.js</p>
+  </div>
+</div>
+
+<!-- ============================================================
+     APLICACI&Oacute;N
+     ============================================================ -->
+<div class="app oculto" id="appScreen">
+
+  <!-- ---------- BARRA LATERAL ---------- -->
+  <aside class="sidebar" id="sidebar" aria-label="Men&uacute; principal">
+    <div class="sidebar-brand">
+      <span class="sidebar-logo" aria-hidden="true">&#128218;</span>
+      <div class="sidebar-titulo">
+        <strong id="marcaNombre">BIBLIOTECA VIRTUAL</strong>
+        <small>DE LA I.E.S. SAN JOSÉ DE PUNO</small>
+      </div>
+      <button type="button" class="btn-icono sidebar-cerrar" id="cerrarSidebar" aria-label="Cerrar men&uacute;">&#10005;</button>
+    </div>
+
+    <div class="sidebar-rol">
+      <span class="avatar" id="avatarInicial" aria-hidden="true">D</span>
+      <div class="sidebar-rol-txt">
+        <strong id="nombreSesion">Docente</strong>
+        <small id="usuarioSesion">admin</small>
+      </div>
+    </div>
+
+    <nav class="nav" id="navPrincipal">
+      <button type="button" class="nav-item activo" data-seccion="inicio">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6V11h-6v9Zm0-16v5h6V4h-6Z"/></svg>
+        <span>Inicio</span>
+      </button>
+      <button type="button" class="nav-item" data-seccion="areas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/></svg>
+        <span>&Aacute;reas curriculares</span>
+        <em class="nav-badge" id="badgeAreas">0</em>
+      </button>
+      <button type="button" class="nav-item" data-seccion="libros">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h11a3 3 0 0 1 3 3v17l-4.5-2.5L12 22l-3.5-2.5L4 22V5a3 3 0 0 1 3-3Zm0 2a1 1 0 0 0-1 1v14.9l2.5-1.4a1 1 0 0 1 1 0L12 20.9l3.5-2.4a1 1 0 0 1 1 0l2.5 1.4V5a1 1 0 0 0-1-1H6Z"/></svg>
+        <span>Biblioteca</span>
+        <em class="nav-badge" id="badgeLibros">0</em>
+      </button>
+      <button type="button" class="nav-item" data-seccion="anuncios">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4a1 1 0 0 0 1 1h2l4 4V5L6 9H4a1 1 0 0 0-1 1Zm16.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4Zm-2.5-8v2.06A6.5 6.5 0 0 1 17 20.94V23h2V4h-2Z"/></svg>
+        <span>Anuncios</span>
+        <em class="nav-badge nav-badge-alerta" id="badgeAnuncios">0</em>
+      </button>
+
+      <hr class="nav-sep">
+
+      <button type="button" class="nav-item" data-seccion="tareas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2h6a2 2 0 0 1 2 2h1a2 2 0 0 1 2 2v16H4V6a2 2 0 0 1 2-2h1a2 2 0 0 1 2-2Zm0 2v1h6V4H9Zm-3 5v2h12V9H6Zm0 4v2h12v-2H6Zm0 4v2h8v-2H6Z"/></svg>
+        <span class="solo-docente">Tareas y actividades</span>
+        <span class="solo-estudiante">Mis tareas</span>
+        <em class="nav-badge" id="badgeTareas">0</em>
+      </button>
+      <button type="button" class="nav-item" data-seccion="entregas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a5 5 0 0 1 5 5v2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2V7a5 5 0 0 1 5-5Zm3 7V7a3 3 0 0 0-6 0v2h6Zm-3 3a2 2 0 0 0-1 3.7V18h2v-2.3A2 2 0 0 0 12 12Z"/></svg>
+        <span class="solo-docente">Entregas de estudiantes</span>
+        <span class="solo-estudiante">Mis entregas</span>
+        <em class="nav-badge" id="badgeEntregas">0</em>
+      </button>
+      <button type="button" class="nav-item" data-seccion="calificaciones">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3 5 6 1-4.5 4.3 1.1 6.1L12 15.9 6.4 18.4l1.1-6.1L3 8l6-1 3-5Zm-1 12h2v2h-2v-2Zm0-7h2v5h-2V7Z"/></svg>
+        <span class="solo-docente">Calificaciones</span>
+        <span class="solo-estudiante">Mis calificaciones</span>
+        <em class="nav-badge" id="badgeCalificaciones">0</em>
+      </button>
+
+      <hr class="nav-sep">
+
+      <button type="button" class="nav-item" data-seccion="fotos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm1 13h14l-4.5-6-3.5 4.5L9.5 13 5 17Zm3.5-7a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg>
+        <span>Fotos</span>
+        <em class="nav-badge" id="badgeFotos">0</em>
+      </button>
+      <button type="button" class="nav-item" data-seccion="museos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 2 7v2h20V7l-10-5Zm-7 9h2v6H5v-6Zm4.5 0h2v6h-2v-6Zm4 0h2v6h-2v-6Zm4.5 0h2v6H18v-6ZM2 19h20v2H2v-2Z"/></svg>
+        <span>Museos Virtuales</span>
+        <em class="nav-badge" id="badgeMuseos">0</em>
+      </button>
+
+      <hr class="nav-sep">
+
+      <button type="button" class="nav-item solo-docente" data-seccion="ajustes">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m19.4 13-.1-1 .1-1 2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1l-.4-2.6h-4l-.4 2.7a7 7 0 0 0-1.7 1l-2.4-1-2 3.4L4.6 11l-.1 1 .1 1-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.4 2.6h4l.4-2.7a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6ZM12 15.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4Z"/></svg>
+        <span>Ajustes</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-pie">
+      <button type="button" class="btn btn-salir btn-bloque" id="btnCerrarSesion">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5v-2H5V5h5V3Zm6.6 4.4L14.2 9.8 17.4 13H9v2h8.4l-3.2 3.2L15.6 19.6 22 13.2 15.6 6.8Z"/></svg>
+        Cerrar sesi&oacute;n
+      </button>
+    </div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+
+  <!-- ---------- CONTENIDO ---------- -->
+  <div class="main">
+    <header class="topbar">
+      <button type="button" class="btn-icono solo-movil" id="abrirSidebar" aria-label="Abrir men&uacute;">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3V6Zm0 5h18v2H3v-2Zm0 5h18v2H3v-2Z"/></svg>
+      </button>
+
+      <div class="topbar-info">
+        <h1 class="topbar-titulo" id="tituloSeccion">Inicio</h1>
+        <p class="topbar-sub" id="subtituloSeccion">Resumen de la biblioteca</p>
+      </div>
+
+      <div class="topbar-acciones">
+        <div class="buscador" id="buscadorGlobal">
+          <span aria-hidden="true">&#128269;</span>
+          <input type="search" id="inputBuscar" placeholder="Buscar libros, tareas&hellip;" aria-label="Buscar">
+        </div>
+        <div class="notif" id="notifContenedor">
+          <button type="button" class="btn-icono notif-btn" id="btnNotificaciones"
+                  aria-label="Notificaciones" aria-expanded="false" title="Notificaciones">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a6 6 0 0 0-6 6v3.6c0 .7-.2 1.4-.6 2L4 16v2h16v-2l-1.4-2.4a4 4 0 0 1-.6-2V8a6 6 0 0 0-6-6Zm0 20a3 3 0 0 0 3-3H9a3 3 0 0 0 3 3Z"/></svg>
+            <em class="notif-badge oculto" id="badgeNotificaciones">0</em>
+          </button>
+          <div class="notif-panel oculto" id="panelNotificaciones">
+            <div class="notif-head">
+              <strong>Notificaciones</strong>
+              <button type="button" class="btn-link" id="btnMarcarNotificaciones">Marcar todas como leídas</button>
+            </div>
+            <div class="notif-lista" id="listaNotificaciones"></div>
+          </div>
+        </div>
+        <button type="button" class="btn-icono" id="btnTema" aria-label="Cambiar tema" title="Cambiar tema">&#127769;</button>
+      </div>
+    </header>
+
+    <main class="content" id="content">
+
+      <!-- ====== INICIO ====== -->
+      <section class="seccion activa" id="sec-inicio">
+        <div class="grid-stats" id="statsGrid"></div>
+
+        <div class="dos-col">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Anuncios recientes</h2>
+              <button type="button" class="btn btn-sm btn-soft" data-ir="anuncios">Ver todos</button>
+            </div>
+            <div id="inicioAnuncios" class="lista-anuncios"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Accesos r&aacute;pidos</h2>
+            </div>
+            <div class="tiles">
+              <button type="button" class="tile" data-ir="libros"><span>&#128214;</span>Biblioteca</button>
+              <button type="button" class="tile" data-ir="tareas"><span>&#128203;</span>Tareas</button>
+              <button type="button" class="tile" data-ir="entregas"><span>&#128229;</span>Entregas</button>
+              <button type="button" class="tile" data-ir="calificaciones"><span>&#127941;</span>Notas</button>
+            </div>
+            <div class="almacen-mini">
+              <div class="almacen-mini-head">
+                <strong>Almacenamiento local</strong>
+                <span id="almacenMiniTxt">Calculando&hellip;</span>
+              </div>
+              <div class="barra"><span id="almacenMiniBarra" style="width:0%"></span></div>
+              <small id="almacenMiniNota">Las fotos y los anuncios se guardan en este navegador; los libros y tareas, en el servidor.</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====== ÁREAS CURRICULARES ====== -->
+      <section class="seccion" id="sec-areas">
+        <p class="areas-intro">Cada &aacute;rea curricular tiene su propio espacio de anuncios. Los comunicados de un &aacute;rea no se mezclan con los de otra.</p>
+        <div class="grid grid-areas" id="gridAreas"></div>
+      </section>
+
+      <!-- ====== BIBLIOTECA ====== -->
+      <section class="seccion" id="sec-libros">
+        <div class="panel panel-subir solo-docente">
+          <div class="panel-head">
+            <h2>Subir libro y clasificarlo</h2>
+            <span class="chip">PDF &middot; DOC &middot; DOCX &middot; m&aacute;x. <span id="chipMaxLibro">25 MB</span></span>
+          </div>
+          <form class="form-rejilla" id="formLibro" novalidate>
+            <div class="drop" id="dropLibro" tabindex="0" role="button" aria-label="Seleccionar archivo del libro">
+              <input type="file" id="inputLibro" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+              <span class="drop-icono" aria-hidden="true">&#128228;</span>
+              <strong id="dropLibroTxt">Arrastra el PDF aqu&iacute; o haz clic para elegir</strong>
+              <small id="dropLibroInfo">.pdf &middot; .doc &middot; .docx</small>
+            </div>
+
+            <div class="form-cols">
+              <label class="campo" for="libroTitulo">
+                <span class="campo-label">T&iacute;tulo del libro <b class="req">*</b></span>
+                <input type="text" id="libroTitulo" class="input" placeholder="Ej. &Aacute;lgebra para secundaria" maxlength="140" required>
+              </label>
+              <label class="campo" for="libroAutor">
+                <span class="campo-label">Autor</span>
+                <input type="text" id="libroAutor" class="input" placeholder="Ej. Ministerio de Educaci&oacute;n" maxlength="120">
+              </label>
+              <label class="campo" for="libroArea">
+                <span class="campo-label">&Aacute;rea curricular <b class="req">*</b></span>
+                <select id="libroArea" class="input" required>
+                  <option value="">Detectando&hellip;</option>
+                </select>
+                <small class="campo-ayuda">La sugerencia autom&aacute;tica se puede cambiar antes de publicar.</small>
+              </label>
+              <div class="campo">
+                <span class="campo-label">Publicaci&oacute;n</span>
+                <label class="switch">
+                  <input type="checkbox" id="libroPublicado" checked>
+                  <span class="switch-track" aria-hidden="true"></span>
+                  <span>Visible para los estudiantes</span>
+                </label>
+              </div>
+              <label class="campo campo-ancho" for="libroDesc">
+                <span class="campo-label">Descripci&oacute;n</span>
+                <textarea id="libroDesc" class="input" rows="2" maxlength="500" placeholder="Breve sinopsis del material"></textarea>
+              </label>
+            </div>
+
+            <div class="clasificacion oculto" id="clasificacionPanel" aria-live="polite">
+              <div class="clasificacion-head">
+                <span class="clasificacion-ico" aria-hidden="true">&#10024;</span>
+                <div class="clasificacion-txt">
+                  <strong id="clasificacionTitulo">Esperando el archivo&hellip;</strong>
+                  <small id="clasificacionDetalle">El sistema leer&aacute; el PDF para proponer un &aacute;rea.</small>
+                </div>
+                <span class="tag tag-azul" id="clasificacionConfianza">Sin an&aacute;lisis</span>
+              </div>
+              <div class="barra-confianza"><span id="clasificacionBarra" style="width:0%"></span></div>
+              <ul class="clasificacion-motivos" id="clasificacionMotivos"></ul>
+            </div>
+
+            <input type="hidden" id="libroEditando" value="">
+            <div class="form-acciones">
+              <button type="reset" class="btn btn-soft" id="btnLimpiarLibro">Limpiar</button>
+              <button type="submit" class="btn btn-primario" id="btnGuardarLibro">Guardar libro</button>
+            </div>
+          </form>
+          <div class="aviso-edicion oculto" id="avisoEdicionLibro">
+            Est&aacute;s <b>editando</b> un libro. <button type="button" class="btn-link" id="btnCancelarEdicion">Cancelar edici&oacute;n</button>
+          </div>
+        </div>
+
+        <div class="barra-filtros">
+          <div class="filtros" id="filtrosCategoria"></div>
+          <input type="search" class="input input-busqueda" id="buscarLibro" placeholder="Buscar por t&iacute;tulo, autor o descripci&oacute;n&hellip;">
+        </div>
+
+        <p class="nota-form" id="notaBiblioteca"></p>
+        <div class="grid" id="gridLibros"></div>
+      </section>
+
+      <!-- ====== TAREAS Y ACTIVIDADES ====== -->
+      <section class="seccion" id="sec-tareas">
+        <div class="panel panel-subir solo-docente" id="panelFormTarea">
+          <div class="panel-head">
+            <h2 id="tituloFormTarea">Nueva tarea o actividad</h2>
+            <span class="chip">PDF &middot; Word &middot; JPG &middot; PNG</span>
+          </div>
+          <form class="form-rejilla" id="formTarea" novalidate>
+            <div class="form-cols">
+              <label class="campo campo-ancho" for="tareaTitulo">
+                <span class="campo-label">T&iacute;tulo de la tarea <b class="req">*</b></span>
+                <input type="text" id="tareaTitulo" class="input" placeholder="Ej. Pr&aacute;ctica de ecuaciones" maxlength="140" required>
+              </label>
+              <label class="campo" for="tareaArea">
+                <span class="campo-label">&Aacute;rea curricular <b class="req">*</b></span>
+                <select id="tareaArea" class="input" required></select>
+              </label>
+              <label class="campo" for="tareaPuntaje">
+                <span class="campo-label">Puntaje m&aacute;ximo</span>
+                <input type="number" id="tareaPuntaje" class="input" min="1" max="100" step="1" value="20">
+              </label>
+              <label class="campo" for="tareaLimite">
+                <span class="campo-label">Fecha y hora l&iacute;mite <b class="req">*</b></span>
+                <input type="datetime-local" id="tareaLimite" class="input" required>
+              </label>
+              <label class="campo" for="tareaPublicacion">
+                <span class="campo-label">Fecha de publicaci&oacute;n</span>
+                <input type="datetime-local" id="tareaPublicacion" class="input">
+                <small class="campo-ayuda">Si es futura, se publicar&aacute; autom&aacute;ticamente.</small>
+              </label>
+              <label class="campo campo-ancho" for="tareaInstrucciones">
+                <span class="campo-label">Descripci&oacute;n e instrucciones <b class="req">*</b></span>
+                <textarea id="tareaInstrucciones" class="input" rows="4" maxlength="4000" placeholder="Explica qu&eacute; debe hacer el estudiante, el formato y los criterios de evaluaci&oacute;n." required></textarea>
+              </label>
+              <label class="campo campo-ancho" for="tareaIndicaciones">
+                <span class="campo-label">Indicaciones adicionales</span>
+                <textarea id="tareaIndicaciones" class="input" rows="2" maxlength="2000" placeholder="Material de consulta, recomendaciones&hellip;"></textarea>
+              </label>
+              <div class="campo campo-ancho">
+                <span class="campo-label">Publicaci&oacute;n y oportunidades</span>
+                <label class="switch">
+                  <input type="checkbox" id="tareaPublicada" checked>
+                  <span class="switch-track" aria-hidden="true"></span>
+                  <span>Publicar ahora (visible para estudiantes)</span>
+                </label>
+                <label class="switch">
+                  <input type="checkbox" id="tareaReapertura">
+                  <span class="switch-track" aria-hidden="true"></span>
+                  <span>Permitir entregar o corregir despu&eacute;s del plazo</span>
+                </label>
+              </div>
+              <div class="campo campo-ancho">
+                <span class="campo-label">Material adjunto (opcional)</span>
+                <input type="file" id="tareaAdjuntos" class="input" multiple
+                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png">
+                <small class="campo-ayuda">Se adjunta al guardar. M&aacute;ximo <span id="chipMaxTarea">25</span> MB por archivo.</small>
+                <ul class="archivos-seleccionados" id="tareaAdjuntosLista"></ul>
+              </div>
+            </div>
+            <input type="hidden" id="tareaEditando" value="">
+            <div class="form-acciones">
+              <button type="reset" class="btn btn-soft" id="btnLimpiarTarea">Limpiar</button>
+              <button type="submit" class="btn btn-primario" id="btnGuardarTarea">Guardar tarea</button>
+            </div>
+          </form>
+          <div class="aviso-edicion oculto" id="avisoEdicionTarea">
+            Est&aacute;s <b>editando</b> una tarea. Los adjuntos nuevos se a&ntilde;aden; los existentes se conservan.
+            <button type="button" class="btn-link" id="btnCancelarEdicionTarea">Cancelar edici&oacute;n</button>
+          </div>
+        </div>
+
+        <div class="barra-filtros">
+          <div class="filtros" id="filtrosTarea"></div>
+          <input type="search" class="input input-busqueda" id="buscarTarea" placeholder="Buscar tareas&hellip;">
+        </div>
+
+        <p class="nota-form" id="notaTareas"></p>
+        <div class="grid" id="gridTareas"></div>
+      </section>
+
+      <!-- ====== ENTREGAS ====== -->
+      <section class="seccion" id="sec-entregas">
+        <div class="barra-filtros solo-docente">
+          <div class="filtros filtros-form">
+            <select class="input input-sm" id="entregaFiltroArea" aria-label="Filtrar por &aacute;rea">
+              <option value="">Todas las &aacute;reas</option>
+            </select>
+            <select class="input input-sm" id="entregaFiltroTarea" aria-label="Filtrar por tarea">
+              <option value="">Todas las tareas</option>
+            </select>
+            <select class="input input-sm" id="entregaFiltroEstado" aria-label="Filtrar por estado">
+              <option value="">Todos los estados</option>
+              <option value="entregada">Entregada</option>
+              <option value="en_revision">En revisi&oacute;n</option>
+              <option value="calificada">Calificada</option>
+              <option value="fuera_de_plazo">Fuera de plazo</option>
+            </select>
+            <input type="search" class="input input-sm" id="entregaFiltroEstudiante" placeholder="Estudiante&hellip;" aria-label="Filtrar por estudiante">
+            <input type="date" class="input input-sm" id="entregaFiltroDesde" aria-label="Desde">
+            <input type="date" class="input input-sm" id="entregaFiltroHasta" aria-label="Hasta">
+            <button type="button" class="btn btn-sm btn-soft" id="entregaFiltroLimpiar">Limpiar</button>
+          </div>
+        </div>
+        <p class="nota-form" id="notaEntregas"></p>
+        <div class="tabla-envoltura" id="tablaEntregas"></div>
+      </section>
+
+      <!-- ====== CALIFICACIONES ====== -->
+      <section class="seccion" id="sec-calificaciones">
+        <div class="barra-filtros">
+          <div class="filtros filtros-form">
+            <select class="input input-sm" id="calificacionFiltroArea" aria-label="Filtrar calificaciones por &aacute;rea">
+              <option value="">Todas las &aacute;reas</option>
+            </select>
+          </div>
+        </div>
+        <p class="nota-form" id="notaCalificaciones"></p>
+        <div class="tabla-envoltura" id="tablaCalificaciones"></div>
+      </section>
+
+      <!-- ====== ANUNCIOS ====== -->
+      <section class="seccion" id="sec-anuncios">
+        <div class="panel panel-subir solo-docente">
+          <div class="panel-head">
+            <h2>Nuevo anuncio</h2>
+          </div>
+          <form id="formAviso" class="form-anuncio">
+            <label class="campo" for="avisoTitulo">
+              <span class="campo-label">T&iacute;tulo <b class="req">*</b></span>
+              <input type="text" id="avisoTitulo" class="input" placeholder="Ej. Entrega de notas del primer bimestre" maxlength="140" required>
+            </label>
+            <label class="campo" for="avisoCuerpo">
+              <span class="campo-label">Mensaje <b class="req">*</b></span>
+              <textarea id="avisoCuerpo" class="input" rows="4" maxlength="1200" placeholder="Escribe el mensaje para los estudiantes" required></textarea>
+            </label>
+            <div class="form-acciones">
+              <button type="reset" class="btn btn-soft">Limpiar</button>
+              <button type="submit" class="btn btn-primario" id="btnGuardarAviso">Publicar anuncio</button>
+            </div>
+          </form>
+        </div>
+        <div class="lista-anuncios" id="listaAvisos"></div>
+      </section>
+
+      <!-- ====== FOTOS ====== -->
+      <section class="seccion" id="sec-fotos">
+        <div class="panel panel-subir solo-docente">
+          <div class="panel-head">
+            <h2>Subir fotos</h2>
+            <span class="chip">JPG &middot; PNG &middot; GIF &middot; WEBP &middot; m&aacute;x. <span id="chipMaxFoto">1 GB</span></span>
+          </div>
+          <form id="formFoto">
+            <div class="drop drop-multi" id="dropFoto" tabindex="0" role="button" aria-label="Seleccionar fotos">
+              <input type="file" id="inputFoto" accept="image/*" multiple hidden>
+              <span class="drop-icono" aria-hidden="true">&#128247;</span>
+              <strong id="dropFotoTxt">Arrastra las im&aacute;genes o haz clic para elegir</strong>
+              <small>Puedes seleccionar varias im&aacute;genes a la vez</small>
+            </div>
+            <label class="campo" for="fotoTitulo">
+              <span class="campo-label">T&iacute;tulo o album (opcional)</span>
+              <input type="text" id="fotoTitulo" class="input" placeholder="Ej. Visita al museo - 12 de marzo" maxlength="140">
+            </label>
+            <div class="form-acciones">
+              <button type="reset" class="btn btn-soft">Limpiar</button>
+              <button type="submit" class="btn btn-primario" id="btnGuardarFotos">Subir fotos</button>
+            </div>
+          </form>
+          <p class="nota-form" id="notaFotos"></p>
+        </div>
+
+        <div class="barra-filtros">
+          <input type="search" class="input input-busqueda" id="buscarFoto" placeholder="Buscar fotos&hellip;">
+        </div>
+
+        <div class="grid grid-fotos" id="gridFotos"></div>
+      </section>
+
+      <!-- ====== MUSEOS VIRTUALES ====== -->
+      <section class="seccion" id="sec-museos">
+        <div class="panel panel-subir solo-docente">
+          <div class="panel-head">
+            <h2>Agregar museo virtual</h2>
+            <span class="chip">Enlace URL</span>
+          </div>
+          <form id="formMuseo" class="form-rejilla">
+            <div class="form-cols">
+              <label class="campo" for="museoTitulo">
+                <span class="campo-label">Nombre del museo <b class="req">*</b></span>
+                <input type="text" id="museoTitulo" class="input" placeholder="Ej. Museo del Prado" maxlength="140" required>
+              </label>
+              <label class="campo" for="museoUrl">
+                <span class="campo-label">Enlace (URL) <b class="req">*</b></span>
+                <input type="url" id="museoUrl" class="input" placeholder="https://www.museodelprado.es" maxlength="500" required>
+              </label>
+              <label class="campo" for="museoImg">
+                <span class="campo-label">Imagen de portada (URL, opcional)</span>
+                <input type="url" id="museoImg" class="input" placeholder="https://.../portada.jpg" maxlength="500">
+              </label>
+              <label class="campo campo-ancho" for="museoDesc">
+                <span class="campo-label">Descripci&oacute;n</span>
+                <textarea id="museoDesc" class="input" rows="2" maxlength="400" placeholder="Qu&eacute; se podr&aacute; visitar en este recorrido virtual"></textarea>
+              </label>
+            </div>
+            <div class="form-acciones">
+              <button type="reset" class="btn btn-soft">Limpiar</button>
+              <button type="submit" class="btn btn-primario" id="btnGuardarMuseo">Agregar enlace</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="barra-filtros">
+          <div class="filtros" id="filtrosMuseo"></div>
+          <input type="search" class="input input-busqueda" id="buscarMuseo" placeholder="Buscar museos&hellip;">
+        </div>
+
+        <div class="grid grid-museos" id="gridMuseos"></div>
+      </section>
+
+      <!-- ====== AJUSTES (solo docente) ====== -->
+      <section class="seccion solo-docente" id="sec-ajustes">
+        <div class="dos-col">
+          <div class="panel">
+            <div class="panel-head"><h2>Identidad del sitio</h2></div>
+            <form id="formConfig" class="form-cols">
+              <label class="campo" for="cfgNombre">
+                <span class="campo-label">Nombre de la instituci&oacute;n</span>
+                <input type="text" id="cfgNombre" class="input" maxlength="60" placeholder="BIBLIOTECA VIRTUAL">
+              </label>
+              <label class="campo" for="cfgCurso">
+                <span class="campo-label">Curso / Nivel</span>
+                <input type="text" id="cfgCurso" class="input" maxlength="60" placeholder="Ej. 4to de secundaria">
+              </label>
+              <label class="campo campo-ancho" for="cfgLimite">
+                <span class="campo-label">L&iacute;mite m&aacute;ximo por archivo</span>
+                <select id="cfgLimite" class="input">
+                  <option value="104857600">100 MB</option>
+                  <option value="524288000">500 MB</option>
+                  <option value="1073741824">1 GB (por defecto)</option>
+                  <option value="2147483648">2 GB</option>
+                </select>
+                <small class="campo-ayuda">L&iacute;mite l&oacute;gico de la aplicaci&oacute;n. El navegador puede imponer uno menor.</small>
+              </label>
+              <div class="campo campo-ancho">
+                <span class="campo-label">Permisos de estudiantes</span>
+                <label class="switch">
+                  <input type="checkbox" id="cfgBorrarTarea">
+                  <span class="switch-track" aria-hidden="true"></span>
+                  <span>Permitir que un estudiante borre <b>sus propias</b> tareas</span>
+                </label>
+                <label class="switch">
+                  <input type="checkbox" id="cfgVerTodas">
+                  <span class="switch-track" aria-hidden="true"></span>
+                  <span>Permitir ver las tareas de todos los compa&ntilde;eros</span>
+                </label>
+                <label class="switch">
+                  <input type="checkbox" id="cfgVerAnuncios">
+                  <span class="switch-track" aria-hidden="true"></span>
+                  <span>Permitir que los estudiantes borren anuncios</span>
+                </label>
+              </div>
+              <div class="form-acciones campo-ancho">
+                <button type="submit" class="btn btn-primario">Guardar ajustes</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h2>Datos locales y respaldo</h2></div>
+            <div class="almacen">
+              <div class="almacen-head">
+                <strong>Espacio local usado (fotos y preferencias)</strong><span id="almacenTxt">Calculando&hellip;</span>
+              </div>
+              <div class="barra"><span id="almacenBarra" style="width:0%"></span></div>
+              <small id="almacenNota" class="campo-ayuda">&nbsp;</small>
+            </div>
+            <div class="acciones-lista">
+              <button type="button" class="btn btn-soft btn-bloque" id="btnPersistente">Solicitar almacenamiento permanente</button>
+              <button type="button" class="btn btn-soft btn-bloque" id="btnExportarMeta">Exportar datos locales (JSON)</button>
+              <button type="button" class="btn btn-soft btn-bloque" id="btnExportarTodo">Exportar copia local (con fotos)</button>
+              <button type="button" class="btn btn-soft btn-bloque" id="btnImportar">Importar datos locales</button>
+              <input type="file" id="inputImportar" accept="application/json,.json" hidden>
+              <button type="button" class="btn btn-peligro btn-bloque" id="btnBorrarTodo">Borrar datos locales</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>C&oacute;mo se guardan los datos</h2></div>
+          <div class="info-grid">
+            <div class="info-card">
+              <h3>&#128421; Biblioteca y tareas en el servidor</h3>
+              <p>Los usuarios, libros, tareas, entregas, calificaciones y notificaciones viven en el API de la carpeta <code>servidor/</code>: base SQLite m&aacute;s archivos en disco. Se comparten entre todos los equipos y el servidor valida los permisos.</p>
+            </div>
+            <div class="info-card">
+              <h3>&#128190; Preferencias y anuncios en este navegador</h3>
+              <p>El tema, el nombre del curso, los anuncios globales y por &aacute;rea, la galer&iacute;a de fotos y los museos se guardan en <code>localStorage</code> e <code>IndexedDB</code> de este navegador. Los anuncios son propios de cada equipo.</p>
+            </div>
+            <div class="info-card">
+              <h3>&#128451; Respaldos separados</h3>
+              <p>Los botones de esta p&aacute;gina exportan e importan solo los datos locales. Para respaldar libros, tareas y entregas, copia la carpeta <code>servidor/datos/</code> en el servidor (base SQLite y archivos).</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="foot">
+      <span id="footTexto">BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO</span>
+      <span class="foot-sep">&middot;</span>
+      <span>Biblioteca y tareas en el servidor &middot; datos locales en este navegador</span>
+    </footer>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: VISOR DE ARCHIVOS
+     ============================================================ -->
+<div class="modal" id="modalVisor" hidden role="dialog" aria-modal="true" aria-labelledby="visorTitulo">
+  <div class="modal-caja modal-grande">
+    <div class="modal-head">
+      <div class="modal-head-txt">
+        <h3 id="visorTitulo">Visor</h3>
+        <p id="visorSub">&nbsp;</p>
+      </div>
+      <div class="modal-head-acc">
+        <div class="zoom" id="zoomControles" hidden>
+          <button type="button" class="btn-icono" id="zoomMenos" aria-label="Alejar">&minus;</button>
+          <span id="zoomNivel">100%</span>
+          <button type="button" class="btn-icono" id="zoomMas" aria-label="Acercar">+</button>
+          <button type="button" class="btn-icono" id="zoomReset" aria-label="Restablecer">&#8634;</button>
+        </div>
+        <button type="button" class="btn-icono" id="visorDescargar" title="Descargar" aria-label="Descargar">&#11015;</button>
+        <button type="button" class="btn-icono" id="visorCerrar" title="Cerrar" aria-label="Cerrar">&#10005;</button>
+      </div>
+    </div>
+    <div class="modal-body visor-body" id="visorBody">
+      <div class="cargando"><span class="spinner"></span><p>Cargando archivo&hellip;</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: VISOR DE MUSEOS (iframe)
+     ============================================================ -->
+<div class="modal" id="modalMuseo" hidden role="dialog" aria-modal="true" aria-labelledby="museoModalTitulo">
+  <div class="modal-caja modal-grande">
+    <div class="modal-head">
+      <div class="modal-head-txt">
+        <h3 id="museoModalTitulo">Museo virtual</h3>
+        <p id="museoModalSub">&nbsp;</p>
+      </div>
+      <div class="modal-head-acc">
+        <a class="btn btn-sm btn-soft" id="museoModalAbrir" href="#" target="_blank" rel="noopener noreferrer">Abrir en pestana nueva</a>
+        <button type="button" class="btn-icono" id="museoModalCerrar" aria-label="Cerrar">&#10005;</button>
+      </div>
+    </div>
+    <div class="modal-body visor-body">
+      <iframe id="museoIframe" class="museo-iframe" title="Visor del museo virtual"
+              sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms"
+              referrerpolicy="no-referrer"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: CONFIRMACI&Oacute;N
+     ============================================================ -->
+<div class="modal" id="modalConfirmar" hidden role="dialog" aria-modal="true" aria-labelledby="confirmTitulo">
+  <div class="modal-caja modal-pequena">
+    <div class="modal-body">
+      <div class="confirm-icono" id="confirmIcono">&#9888;</div>
+      <h3 id="confirmTitulo">Confirmar</h3>
+      <p id="confirmTexto">&nbsp;</p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-soft" id="confirmNo">Cancelar</button>
+      <button type="button" class="btn btn-peligro" id="confirmSi">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: BARRA DE PROGRESO
+     ============================================================ -->
+<div class="modal" id="modalProgreso" hidden role="dialog" aria-modal="true" aria-label="Procesando">
+  <div class="modal-caja modal-pequena">
+    <div class="modal-body">
+      <h3 id="progresoTitulo">Procesando&hellip;</h3>
+      <div class="barra"><span id="progresoBarra" style="width:0%"></span></div>
+      <p class="progreso-txt" id="progresoTexto">Preparando&hellip;</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: CALIFICAR ENTREGA
+     ============================================================ -->
+<div class="modal" id="modalCalificar" hidden role="dialog" aria-modal="true" aria-labelledby="calificarTitulo">
+  <div class="modal-caja modal-pequena">
+    <div class="modal-head">
+      <div class="modal-head-txt">
+        <h3 id="calificarTitulo">Calificar entrega</h3>
+        <p id="calificarSub">&nbsp;</p>
+      </div>
+      <button type="button" class="btn-icono" id="calificarCerrar" aria-label="Cerrar">&#10005;</button>
+    </div>
+    <div class="modal-body modal-form">
+      <input type="hidden" id="calificarEntregaId">
+      <label class="campo" for="calificarNota">
+        <span class="campo-label">Calificaci&oacute;n (sobre <span id="calificarMax">20</span>)</span>
+        <input type="number" id="calificarNota" class="input" min="0" step="0.5" placeholder="Ej. 18">
+      </label>
+      <label class="campo" for="calificarEstado">
+        <span class="campo-label">Estado de la entrega</span>
+        <select id="calificarEstado" class="input">
+          <option value="entregada">Entregada</option>
+          <option value="en_revision">En revisi&oacute;n (solicitar correcci&oacute;n)</option>
+          <option value="calificada">Calificada</option>
+          <option value="fuera_de_plazo">Fuera de plazo</option>
+        </select>
+      </label>
+      <label class="campo" for="calificarObs">
+        <span class="campo-label">Observaciones y retroalimentaci&oacute;n</span>
+        <textarea id="calificarObs" class="input" rows="4" maxlength="2000" placeholder="Indica aciertos, errores y qu&eacute; debe corregir."></textarea>
+      </label>
+      <p class="login-error" id="calificarError" role="alert"></p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-soft" id="calificarCancelar">Cancelar</button>
+      <button type="button" class="btn btn-primario" id="calificarGuardar">Guardar calificaci&oacute;n</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: ENTREGAR TAREA (estudiante)
+     ============================================================ -->
+<div class="modal" id="modalEntrega" hidden role="dialog" aria-modal="true" aria-labelledby="entregaTitulo">
+  <div class="modal-caja modal-pequena">
+    <div class="modal-head">
+      <div class="modal-head-txt">
+        <h3 id="entregaTitulo">Entregar tarea</h3>
+        <p id="entregaSub">&nbsp;</p>
+      </div>
+      <button type="button" class="btn-icono" id="entregaCerrar" aria-label="Cerrar">&#10005;</button>
+    </div>
+    <div class="modal-body modal-form">
+      <input type="hidden" id="entregaTareaId">
+      <label class="campo" for="entregaArchivo">
+        <span class="campo-label">Archivo de tu entrega <b class="req">*</b></span>
+        <input type="file" id="entregaArchivo" class="input"
+               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png">
+        <small class="campo-ayuda">PDF, DOC, DOCX, JPG, JPEG o PNG. M&aacute;ximo <span id="entregaMaxMb">25</span> MB.</small>
+      </label>
+      <label class="campo" for="entregaComentario">
+        <span class="campo-label">Comentario para el docente</span>
+        <textarea id="entregaComentario" class="input" rows="3" maxlength="1000" placeholder="Opcional"></textarea>
+      </label>
+      <p class="login-error" id="entregaError" role="alert"></p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-soft" id="entregaCancelar">Cancelar</button>
+      <button type="button" class="btn btn-primario" id="entregaEnviar">Enviar entrega</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notificaciones -->
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<!-- Socket.IO es opcional: script.js funciona aunque el CDN o el backend no estén disponibles. -->
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<!-- Configuración del API: URL pública del servidor (nunca credenciales). -->
+<script src="config.js"></script>
+<!-- Lector de PDF copiado al proyecto: sin CDN ni conexión obligatoria. -->
+<script src="vendor/pdfjs/pdf.min.js"></script>
+<script src="js/api.js"></script>
+<script src="js/clasificador.js"></script>
+<script src="js/pdf-texto.js"></script>
+<script src="js/biblioteca-ui.js"></script>
+<script src="js/tareas-ui.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
