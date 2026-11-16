@@ -1,14 +1,8 @@
 /*
- * api.js adaptado para SUPABASE
+ * api.js adaptado para SUPABASE (Versión Final)
  */
 (function () {
   'use strict';
-
-  var supabase = window.supabaseClient; 
-  
-  if (!supabase) {
-    console.error("No se encontró el cliente de Supabase. Revisa script.js");
-  }
 
   window.HEMEROTECA_API = {
     base: 'supabase',
@@ -19,13 +13,16 @@
     limpiarSesion: function() {},
 
     libros: function (filtros) {
+      var supabase = window.supabaseClient;
       var consulta = supabase.from('libros').select('*').order('fecha', { ascending: false });
+      
       if (filtros && filtros.q) {
         consulta = consulta.or(`titulo.ilike.%${filtros.q}%,autor.ilike.%${filtros.q}%,descripcion.ilike.%${filtros.q}%`);
       }
       if (filtros && filtros.area) {
         consulta = consulta.eq('area', filtros.area);
       }
+
       return consulta.then(function (respuesta) {
         if (respuesta.error) throw respuesta.error;
         return respuesta.data;
@@ -33,10 +30,10 @@
     },
 
     crearLibro: function (formData) {
-      // Buscamos el archivo con diferentes nombres por si acaso
-      var archivo = formData.get('archivo') || formData.get('file') || formData.get('inputLibro');
+      var supabase = window.supabaseClient;
+      var archivo = formData.get('archivo');
       
-      if (!archivo) return Promise.reject(new Error("No se seleccionó ningún archivo o el nombre no coincide."));
+      if (!archivo) return Promise.reject(new Error("No se seleccionó ningún archivo."));
 
       var nombreArchivo = Date.now() + '_' + archivo.name.replace(/\s+/g, '_');
 
@@ -45,6 +42,7 @@
           if (respuestaSubida.error) throw respuestaSubida.error;
 
           var urlPublica = supabase.storage.from('sanjome').getPublicUrl(nombreArchivo).data.publicUrl;
+          var esPublico = formData.get('publicado') === 'true';
 
           var datosLibro = {
             titulo: formData.get('titulo') || 'Sin título',
@@ -54,7 +52,7 @@
             archivo_url: urlPublica,
             nombre_archivo: archivo.name,
             tamano: archivo.size,
-            publicado: true
+            publicado: esPublico
           };
 
           return supabase.from('libros').insert([datosLibro]).select();
@@ -65,7 +63,20 @@
         });
     },
 
+    actualizarLibro: function (id, cambios) {
+      var supabase = window.supabaseClient;
+      if (cambios.publicado !== undefined) {
+        cambios.publicado = cambios.publicado === true || cambios.publicado === 'true';
+      }
+      return supabase.from('libros').update(cambios).eq('id', id).select()
+        .then(function (resp) {
+          if (resp.error) throw resp.error;
+          return resp.data[0];
+        });
+    },
+
     eliminarLibro: function (id) {
+      var supabase = window.supabaseClient;
       return supabase.from('libros').delete().eq('id', id).then(function (resp) {
         if (resp.error) throw resp.error;
         return true;
@@ -80,7 +91,6 @@
       }
     },
     
-    // Dejamos lo demás vacío por ahora para que no dé error
     tareas: function() { return Promise.resolve([]); },
     crearTarea: function() { return Promise.reject("Próximamente"); },
     actualizarTarea: function() { return Promise.reject("Próximamente"); },
