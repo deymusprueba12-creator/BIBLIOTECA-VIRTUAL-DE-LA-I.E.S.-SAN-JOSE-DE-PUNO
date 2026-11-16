@@ -33,6 +33,9 @@
    o desde variables del entorno (GitHub Secrets) y contiene solo hashes.
    Si falta config.js, el login muestra un aviso de configuración. */
 var AUTH = (typeof window !== 'undefined' && window.HEMEROTECA_AUTH) || null;
+const supabaseUrl = 'https://tqvciaailkfhowdsjwhx.supabase.co'; 
+const supabaseKey = 'PEGA_AQUI_TU_CLAVE_PUBLICABLE'; 
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 var ROLES = Object.freeze({ DOCENTE: 'docente', ESTUDIANTE: 'estudiante' });
 var NOMBRE_APP = 'BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO';
 var DURACION_TOKEN_MS = 8 * 60 * 60 * 1000;
