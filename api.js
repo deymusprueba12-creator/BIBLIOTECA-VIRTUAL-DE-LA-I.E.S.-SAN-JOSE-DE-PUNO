@@ -18,17 +18,14 @@
     guardarSesion: function() {},
     limpiarSesion: function() {},
 
-    // ----- LIBROS (Ahora usa Supabase) -----
     libros: function (filtros) {
       var consulta = supabase.from('libros').select('*').order('fecha', { ascending: false });
-      
       if (filtros && filtros.q) {
         consulta = consulta.or(`titulo.ilike.%${filtros.q}%,autor.ilike.%${filtros.q}%,descripcion.ilike.%${filtros.q}%`);
       }
       if (filtros && filtros.area) {
         consulta = consulta.eq('area', filtros.area);
       }
-
       return consulta.then(function (respuesta) {
         if (respuesta.error) throw respuesta.error;
         return respuesta.data;
@@ -36,7 +33,7 @@
     },
 
     crearLibro: function (formData) {
-      // Buscamos el archivo con el nombre que le da el navegador por defecto
+      // Buscamos el archivo con diferentes nombres por si acaso
       var archivo = formData.get('archivo') || formData.get('file') || formData.get('inputLibro');
       
       if (!archivo) return Promise.reject(new Error("No se seleccionó ningún archivo o el nombre no coincide."));
