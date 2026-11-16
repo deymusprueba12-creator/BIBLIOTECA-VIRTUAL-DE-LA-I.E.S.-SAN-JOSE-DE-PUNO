@@ -1,94 +1,141 @@
-# BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO — roles y áreas curriculares
+# BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO — backend, roles y áreas curriculares
 
 ## Resumen
 
-- **Renombrado exacto** del sitio: `Hemeroteca de la I.E. SAN JOSÉ DE PUNO` → `BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO` (título, meta description, cabecera del login, marca lateral, pie y configuración por defecto). No se modificó ningún otro texto del sitio.
-- **Dos accesos separados** en la misma pantalla de login, mediante pestañas **Docente** y **Estudiante**. Cada rol tiene su propio usuario y contraseña, valida contra hashes SHA-256, rechaza credenciales del otro rol, permite cerrar sesión y protege las secciones internas con un token de sesión con rol y caducidad.
-- **11 áreas curriculares** con el nombre oficial exacto, sin numeración (`6.1`, `6.2`…) y sin números de página:
-  | Área | Color |
-  |---|---|
-  | Desarrollo Personal, Ciudadanía y Cívica | `#1E88E5` |
-  | Ciencias Sociales | `#43A047` |
-  | Educación Física | `#F4511E` |
-  | Arte y Cultura | `#8E24AA` |
-  | Comunicación | `#E53935` |
-  | Castellano como Segunda Lengua | `#00ACC1` |
-  | Inglés como Lengua Extranjera | `#3949AB` |
-  | Matemática | `#FB8C00` |
-  | Ciencia y Tecnología | `#00897B` |
-  | Educación para el Trabajo | `#6D4C41` |
-  | Educación Religiosa | `#D81B60` |
-- **Un espacio de anuncios por área**: cada tarjeta de área tiene su propia lista y su propio formulario (solo docente). Los anuncios se guardan en `hemeroteca_avisos_areas` como `{ [areaId]: [...] }`, totalmente independientes del bloque global `hemeroteca_avisos`, que sigue funcionando igual y no se mezcla con las áreas.
-- **Credenciales fuera del repositorio**: `config.js` se genera desde variables de entorno con `scripts/generar-config.mjs` y solo contiene hashes. `.env`, `config.js` y `_admin/` están en `.gitignore`.
+Este PR convierte la maqueta estática en una aplicación real con **backend
+propio**: una API en Node.js **sin dependencias externas** y base de datos
+SQLite, más un frontend estático que speak de ella.
 
-## Archivos modificados
+- **Dos roles con permisos comprobados en el servidor**: `docente` y
+  `estudiante`. Ocultar botones ya no es la única protección: cada ruta de la
+  API decide el acceso y el estudiante solo ve y toca sus propias entregas.
+- **Sesiones reales**: contraseñas con **scrypt** (`node:crypto`), sal aleatoria
+  por usuario, comparación en tiempo constante y **tokens de sesión opacos** de
+  256 bits con caducidad y revocación al cerrar sesión. Se sustituye el login
+  de maqueta (hashes SHA-256 en el navegador) por autenticación en servidor.
+- **11 áreas curriculares** con el nombre oficial exacto y su color, cada una
+  con su **propio espacio de anuncios**, independiente del bloque general.
+- **Ciclo académico completo**: libros por área (con visor de PDF/Word
+  integrated), tareas con fecha límite, fecha de publicación programada,
+  adjuntos y reopenura del plazo, entregas de los estudiantes, calificación con
+  observaciones y notificaciones.
+- **El frontend modularizado**: `js/api.js` (comunicación con el servidor),
+  `js/biblioteca-ui.js`, `js/tareas-ui.js`, `js/clasificador.js` y
+  `js/pdf-texto.js`, más `vendor/pdfjs/` local (Apache-2.0) para no depender de
+  ninguna CDN.
+- **Documentación y configuración al día**: `README.md` reescrito con la
+  arquitectura real (antes describía una app «sin backend» que ya no existe),
+  plantillas `.env` y `servidor/.env.example` con el límite de subida unificado
+  en 100 MB.
+
+## Arquitectura
+
+```
+Frontend estático (index.html + styles.css + script.js + js/)  ──HTTP──▶  API Node (servidor/)
+                                                                              │
+                                                                     SQLite (node:sqlite)
+```
+
+- `servidor/src/app.js` — servidor HTTP nativo, CORS y autenticación por token.
+- `servidor/src/rutas.js` — todas las rutas de la API.
+- `servidor/src/servicios/` — `usuarios`, `libros`, `tareas`, `entregas`,
+  `notificaciones`.
+- `servidor/src/lib/` — `http`, `validacion`, `seguridad` (scrypt y tokens),
+  `archivos`.
+- `servidor/src/bd/` — `almacen.js` y `esquema.sql`.
+- `servidor/test/api.test.js` — 18 pruebas de la API.
+
+## Corrección de errores
+
+- **500 «Error interno del servidor» al crear una tarea.** `datosTarea()` hacía
+  fallback a `fila.titulo` / `fila.area` / `fila.instrucciones` sobre una fila
+  inexistente al crear (`fila === null`), y reventaba con `TypeError`. Ahora, en
+  creación, título y área se validan siempre (400 con mensaje claro) e
+  instrucciones es opcional con valor por defecto `''`, coherente con el
+  esquema (`NOT NULL DEFAULT ''`); en edición se mantiene el comportamiento
+  anterior. Test de regresión incluido.
+- **Login inaccesible («No se pudo conectar con el servidor»).** Faltaba
+  `servidor/.env`, sin el cual no se creaban las cuentas iniciales ni se abría
+  el puerto. Se documenta el arranque completo en el README.
+
+## Archivos incluidos
 
 | Archivo | Cambio |
 |---|---|
-| `index.html` | Pestañas de rol en el login, marca y textos renombrados, sección y entrada de navegación "Áreas curriculares", carga de `config.js` antes de `script.js`, corrección del cierre malformado del documento |
-| `script.js` | Autenticación por rol con hashes y token con caducidad, bloqueo de intentos, constante `AREAS`, renderizado y acciones de anuncios por área, guarda de Socket.IO |
-| `styles.css` | Estilos de las pestañas de rol y de las tarjetas de área (tema claro y oscuro, responsive) |
-| `scripts/generar-config.mjs` | Generador de `config.js` desde `.env` o variables del entorno |
-| `.env.example` | Plantilla de variables de entorno con placeholders |
-| `.github/workflows/deploy-pages.yml` | Publicación opcional en GitHub Pages generando `config.js` desde Secrets |
-| `.gitignore` | Ignora `.env`, `config.js`, `_admin/`, `node_modules/` |
-| `README.md` | Documentación de roles, configuración, áreas, claves de almacenamiento y limitaciones de seguridad |
+| `servidor/` (API completa) | Node sin dependencias: sesión, usuarios, libros, tareas, entregas, calificaciones, notificaciones, archivos y esquema SQLite |
+| `servidor/test/api.test.js` | 18 pruebas de la API, incluida la regresión del 500 |
+| `servidor/.env.example` | Plantilla de configuración del servidor |
+| `js/` | Módulos del frontend: API, biblioteca, tareas, clasificación y texto de PDF |
+| `vendor/pdfjs/` | pdf.js local con su licencia, sin CDN |
+| `index.html` | Pestañas de rol, áreas curriculares, sección de tareas y carga de `js/` |
+| `script.js` | Sesión contra el servidor, áreas, anuncios por área y arranque |
+| `styles.css` | Pestañas de rol, tarjetas de área, tema claro/oscuro y responsive |
+| `styles.css`, `script.js`, `scripts/generar-config.mjs` | `config.js` pasa a contener solo la URL del API y el límite de subida (sin secretos) |
+| `.env.example` | Plantilla con el límite de 100 MB documentado |
+| `README.md` | Reescrito con la arquitectura real, la API, las pruebas y el despliegue |
+| `PR_BODY.md` | Este documento |
 
-## Cómo probar los dos accesos
+## Cómo probarlo
 
-1. Copia `.env.example` a `.env` y define credenciales de **demostración** (por ejemplo `docente` / `docente123` y `estudiante` / `estudiante123`; no subas ese archivo).
-2. Genera la configuración y levanta un servidor local:
-   ```bash
-   node scripts/generar-config.mjs
-   python -m http.server 8099 --bind 127.0.0.1
-   ```
-3. Abre `http://127.0.0.1:8099/index.html`.
+```bash
+# 1. Configurar y arrancar el servidor
+cd servidor
+cp .env.example .env        # define DOCENTE_* y ESTUDIANTE_*
+npm start                   # http://127.0.0.1:3210
 
-**Acceso docente**
-1. Pestaña **Docente** → usuario y contraseña de docente → **Ingresar**.
-2. Menú **Áreas curriculares**: se ven las 11 áreas con su color y un formulario por área.
-3. Publica un anuncio en *Ciencias Sociales*: aparece solo en esa tarjeta y en ninguna otra.
-4. Elimina ese anuncio con el botón **Eliminar** de la tarjeta (pide confirmación).
+# 2. En otra terminal, desde la raíz
+node scripts/generar-config.mjs
+python -m http.server 8099 --bind 127.0.0.1
 
-**Acceso estudiante**
-1. **Cerrar sesión** → pestaña **Estudiante** → usuario y contraseña de estudiante → **Ingresar**.
-2. Las 11 áreas y sus anuncios se ven en modo lectura; los formularios y los botones de borrado no aparecen.
-3. Intenta publicar desde la consola con el formulario del área: el mensaje es "Solo el docente puede publicar anuncios de área" y nada se guarda.
-
-**Comprobaciones adicionales**
-- Estando en la pestaña *Docente*, las credenciales de estudiante se rechazan (y viceversa).
-- Recargar la página mantiene la sesión; **Cerrar sesión** la elimina.
-- 5 intentos fallidos bloquean el acceso 60 segundos, incluso tras recargar.
-- Los anuncios generales siguen en su bloque de siempre y no se mezclan con los de área.
-
-## Variables de entorno necesarias
-
-Nombres exactos (valores nunca en el repositorio; mismos nombres como GitHub Secrets para el workflow de Pages):
-
-```
-DOCENTE_USUARIO
-DOCENTE_PASSWORD
-ESTUDIANTE_USUARIO
-ESTUDIANTE_PASSWORD
+# 3. Abrir http://127.0.0.1:8099/index.html
 ```
 
-## Limitaciones de seguridad (sitio estático)
+**Pruebas automáticas**
 
-- No hay backend: la validación ocurre en el navegador, así que cualquiera puede leer `script.js`, `config.js` y el almacenamiento local, o modificar el JavaScript.
-- Los hashes SHA-256 evitan contraseñas en texto plano en el código, pero **no son seguridad real**; el bloqueo de intentos y la ocultación de secciones son disuasorios.
-- Los datos son locales a cada navegador y no se sincronizan entre equipos.
-- Para autenticación y permisos reales hace falta un backend con sesiones y validación en servidor.
-- No deben usarse contraseñas personales ni institucionales en este proyecto.
+```bash
+npm test --prefix servidor
+```
+
+18 pruebas, 18 correctas: sesión, permisos por rol, aislamiento entre
+estudiantes, filtros por área, borradores y publicación, adjuntos, entregas,
+calificación, bloqueo tras 5 intentos, cierre de sesión y creación de tareas
+con campos ausentes.
+
+**Pruebas manuales realizadas**
+
+- Login de docente y de estudiante; el rol se refleja en el menú y en los
+  permisos reales del servidor (`POST /api/tareas` con token de estudiante →
+  **403**).
+- El estudiante no ve los botones de guardar ni los formularios de las 11 áreas
+  (comprobado con `getComputedStyle`, no solo mirando el código).
+- Flujo completo en el navegador: el docente crea una tarea desde el formulario
+  → el estudiante la ve publicada → entrega el archivo → el docente la califica
+  → el estudiante ve la nota y recibe la notificación.
+- Creación de tarea **sin** `instrucciones` → **201** (antes 500); **sin**
+  título → 400 *«El campo «título» es obligatorio.»*; **sin** área → 400.
+- Sesión persistente tras recargar, cierre de sesión que invalida el token,
+  cero errores en la consola del navegador.
+
+## Seguridad
+
+- Contraseñas con **scrypt**, sal de 16 bytes por usuario y comparación en
+  tiempo constante.
+- Tokens opacos de 256 bits (`randomBytes(32)`) con caducidad y revocación.
+- Permisos, ownership y validación **en el servidor** en cada ruta.
+- Aislamiento entre estudiantes, bloqueo tras 5 intentos y validación de
+  archivos (tamaño, tipo, duplicados por SHA-256).
+- CORS con lista de orígenes permitidos.
+
+Limitaciones conocidas: el servidor es HTTP sin cifrar (en producción, proxy
+inverso con HTTPS), la base de datos no se cifra en reposo ni tiene copia
+automática, y `servidor/datos/` hay que respaldarlo a mano.
 
 ## Notas para quien revise
 
-- No se eliminó ninguna funcionalidad existente ni se tocó la navegación, los estilos globales, los enlaces o las secciones ajenas al cambio.
+- **Ningún secreto en el repositorio**: `.env`, `servidor/.env`, `config.js`,
+  `servidor/datos/` y `*.sqlite` están en `.gitignore`. Las credenciales de
+  demo que aparecen en los ejemplos son de invención.
 - `enlace/` (aplicación Node ajena a este sitio) queda fuera del commit.
-- `config.js`, `.env` y `_admin/` no están versionados.
-
-## Pruebas realizadas
-
-- `node --check` sobre `script.js`, `config.js` y `scripts/generar-config.mjs`: sin errores.
-- `git diff --check`: sin problemas de espacios.
-- Búsqueda de secretos en el commit: sin contraseñas en texto plano.
-- Pruebas manuales en navegador: ambos logins, rechazo cruzado de rol, cierre de sesión, persistencia de sesión, bloqueo tras 5 intentos, 11 áreas con sus 11 colores exactos, aislamiento y persistencia de anuncios por área, anuncios globales intactos, formularios ocultos y publicación bloqueada para estudiantes, borrado con confirmación, visibilidad en tema claro y oscuro, sin errores ni avisos en consola.
+- `_admin/` sigue fuera del repositorio.
+- El renombrado a *BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO* se mantiene
+  intacto, incluida la ortografía oficial de las 11 áreas.
