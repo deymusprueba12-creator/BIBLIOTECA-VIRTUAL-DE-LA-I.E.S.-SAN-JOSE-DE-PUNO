@@ -218,15 +218,27 @@ export function obtenerTarea({ almacen }, usuario, id) {
    -------------------------------------------------------------------------- */
 
 function datosTarea(datos, fila = null) {
-  const titulo = datos.titulo !== undefined
-    ? textoObligatorio(datos.titulo, 'título', 200)
-    : fila.titulo;
+  // En creación (fila === null) no hay valor previo del que heredar: los campos
+  // obligatorios se validan siempre y los opcionales toman su valor por defecto.
+  // Antes, al faltar un campo se leía `fila.<campo>` sobre null y el servidor
+  // respondía 500 «Error interno del servidor» en lugar de un 400 con mensaje.
+  const esEdicion = fila !== null;
 
-  const area = datos.area !== undefined ? areaObligatoria(datos.area) : fila.area;
+  const titulo = esEdicion
+    ? (datos.titulo !== undefined
+      ? textoObligatorio(datos.titulo, 'título', 200)
+      : fila.titulo)
+    : textoObligatorio(datos.titulo, 'título', 200);
 
-  const instrucciones = datos.instrucciones !== undefined
-    ? textoObligatorio(datos.instrucciones, 'instrucciones', 8000)
-    : fila.instrucciones;
+  const area = esEdicion
+    ? (datos.area !== undefined ? areaObligatoria(datos.area) : fila.area)
+    : areaObligatoria(datos.area);
+
+  const instrucciones = esEdicion
+    ? (datos.instrucciones !== undefined
+      ? textoObligatorio(datos.instrucciones, 'instrucciones', 8000)
+      : fila.instrucciones)
+    : textoOpcional(datos.instrucciones, 8000);
 
   const indicaciones = datos.indicaciones !== undefined
     ? textoOpcional(datos.indicaciones, 4000)

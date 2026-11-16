@@ -621,3 +621,39 @@ test('los filtros por área no mezclan tareas', async () => {
   assert.equal(matematicas.datos.tareas[0].area, 'matematica');
   assert.equal(comunicacion.datos.tareas[0].area, 'comunicacion');
 });
+
+/* --------------------------------------------------------------------------
+   10. Regresión: creación de tareas con campos ausentes
+   -------------------------------------------------------------------------- */
+
+test('crear una tarea sin campos opcionales no rompe el servidor', async () => {
+  // Regresión: al faltar un campo, el servidor leía sobre una fila inexistente
+  // y devolvía 500 «Error interno del servidor» en lugar de crear la tarea.
+  const sinInstrucciones = await pedir('POST', '/api/tareas', {
+    token: ctx.docente,
+    cuerpo: {
+      titulo: 'Tarea sin instrucciones',
+      area: 'ingles',
+      publicada: false,
+    },
+  });
+  assert.equal(sinInstrucciones.estado, 201, JSON.stringify(sinInstrucciones.datos));
+  assert.equal(sinInstrucciones.datos.tarea.instrucciones, '');
+  assert.equal(sinInstrucciones.datos.tarea.area, 'ingles');
+  assert.equal(sinInstrucciones.datos.tarea.publicada, false);
+
+  // El título y el área sí son obligatorios: 400 con mensaje, nunca 500.
+  const sinTitulo = await pedir('POST', '/api/tareas', {
+    token: ctx.docente,
+    cuerpo: { area: 'ingles', instrucciones: 'Sin título.' },
+  });
+  assert.equal(sinTitulo.estado, 400, JSON.stringify(sinTitulo.datos));
+  assert.match(sinTitulo.datos.error, /título/i);
+
+  const sinArea = await pedir('POST', '/api/tareas', {
+    token: ctx.docente,
+    cuerpo: { titulo: 'Sin área', instrucciones: 'Sin área.' },
+  });
+  assert.equal(sinArea.estado, 400, JSON.stringify(sinArea.datos));
+  assert.match(sinArea.datos.error, /área/i);
+});
