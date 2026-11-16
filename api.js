@@ -4,14 +4,12 @@
 (function () {
   'use strict';
 
-  // Usamos el cliente de Supabase que ya creaste en script.js
   var supabase = window.supabaseClient; 
   
   if (!supabase) {
     console.error("No se encontró el cliente de Supabase. Revisa script.js");
   }
 
-  // Objeto simulado para mantener compatibilidad con el resto de tu código
   window.HEMEROTECA_API = {
     base: 'supabase',
     haySesion: function() { return true; },
@@ -24,7 +22,6 @@
     libros: function (filtros) {
       var consulta = supabase.from('libros').select('*').order('fecha', { ascending: false });
       
-      // Si hay búsqueda, la aplicamos
       if (filtros && filtros.q) {
         consulta = consulta.or(`titulo.ilike.%${filtros.q}%,autor.ilike.%${filtros.q}%,descripcion.ilike.%${filtros.q}%`);
       }
@@ -39,22 +36,19 @@
     },
 
     crearLibro: function (formData) {
-      // 1. Extraemos el archivo del FormData
-      var archivo = formData.get('archivo'); // Asegúrate de que tu input file se llame 'archivo'
-      if (!archivo) return Promise.reject(new Error("No se seleccionó ningún archivo."));
+      // Buscamos el archivo con el nombre que le da el navegador por defecto
+      var archivo = formData.get('archivo') || formData.get('file') || formData.get('inputLibro');
+      
+      if (!archivo) return Promise.reject(new Error("No se seleccionó ningún archivo o el nombre no coincide."));
 
-      // 2. Creamos un nombre único para el archivo
       var nombreArchivo = Date.now() + '_' + archivo.name.replace(/\s+/g, '_');
 
-      // 3. Subimos el archivo al bucket 'sanjome'
       return supabase.storage.from('sanjome').upload(nombreArchivo, archivo)
         .then(function (respuestaSubida) {
           if (respuestaSubida.error) throw respuestaSubida.error;
 
-          // 4. Obtenemos la URL pública del archivo
           var urlPublica = supabase.storage.from('sanjome').getPublicUrl(nombreArchivo).data.publicUrl;
 
-          // 5. Guardamos los datos en la tabla 'libros'
           var datosLibro = {
             titulo: formData.get('titulo') || 'Sin título',
             autor: formData.get('autor') || 'Anónimo',
@@ -70,7 +64,7 @@
         })
         .then(function (respuestaDB) {
           if (respuestaDB.error) throw respuestaDB.error;
-          return respuestaDB.data[0]; // Retornamos el libro recién creado
+          return respuestaDB.data[0];
         });
     },
 
@@ -82,7 +76,6 @@
     },
 
     descargarLibro: function (libro) {
-      // Abrimos el enlace del archivo en una nueva pestaña
       if (libro.archivo_url) {
         window.open(libro.archivo_url, '_blank');
       } else {
@@ -90,9 +83,7 @@
       }
     },
     
-    // ----- EL RESTO DE FUNCIONES (Tareas, etc.) -----
-    // Por ahora las dejamos vacías para que no den error, 
-    // luego las adaptaremos a Supabase si quieres.
+    // Dejamos lo demás vacío por ahora para que no dé error
     tareas: function() { return Promise.resolve([]); },
     crearTarea: function() { return Promise.reject("Próximamente"); },
     actualizarTarea: function() { return Promise.reject("Próximamente"); },
