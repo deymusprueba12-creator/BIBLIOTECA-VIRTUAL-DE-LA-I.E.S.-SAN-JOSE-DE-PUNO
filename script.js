@@ -35,7 +35,7 @@
 var AUTH = (typeof window !== 'undefined' && window.HEMEROTECA_AUTH) || null;
 const supabaseUrl = 'https://tqvciaailkfhowdsjwhx.supabase.co'; 
 const supabaseKey = 'sb_publishable_rpJ43pOYKWkot6oWeg6Piw_5qrXm5_w'; 
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 var ROLES = Object.freeze({ DOCENTE: 'docente', ESTUDIANTE: 'estudiante' });
 var NOMBRE_APP = 'BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO';
 var DURACION_TOKEN_MS = 8 * 60 * 60 * 1000;
