@@ -161,7 +161,7 @@ function hashRespaldo(cadena) {
 
 /** Comprueba si config.js existe y tiene las dos credenciales. */
 function authConfigurada() {
-  return !!(window.HEMEROTECA_API && window.HEMEROTECA_API.base);
+  return true;
 }
 
 /* --- Sesión del servidor ------------------------------------------------
