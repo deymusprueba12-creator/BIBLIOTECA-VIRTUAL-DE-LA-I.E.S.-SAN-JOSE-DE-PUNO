@@ -11,9 +11,17 @@ La aplicación tiene **dos partes**:
 | **Frontend** | Sitio estático (HTML + CSS + JavaScript puro, sin frameworks) | Raíz del repositorio |
 | **Servidor** | API con Node.js **sin dependencias externas** y base SQLite | `servidor/` |
 
-Los datos (libros, tareas, entregas, calificaciones, usuarios, notificaciones)
-viven **en el servidor**, no en el navegador: el docente publica y todos los
-equipos del centro ven lo mismo.
+Los datos de **libros, tareas, entregas, calificaciones, usuarios y
+notificaciones** viven **en el servidor**, no en el navegador: el docente
+publica y todos los equipos del centro ven lo mismo.
+
+> ⚠️ **Lo que aún es local.** Los **anuncios** (generales y por área), las
+> **fotos** y los **museos virtuales** siguen guardándose en el navegador del
+> docente (`localStorage` + `IndexedDB`), igual que en la versión anterior de
+> esta aplicación: el servidor todavía no tiene API para ellos. Para
+> compartirlos con el centro hay que usar **Ajustes → Exportar copia completa**
+> en el equipo del docente e **Importar copia de seguridad** en el de cada
+> aula.
 
 ---
 
@@ -27,11 +35,13 @@ equipos del centro ven lo mismo.
   publicación programada, adjuntos, reopenura del plazo y puntaje máximo.
 - **Entregas**: ver, descargar y **calificar** lo que entrega cada estudiante.
 - **Anuncios**: comunicados para todo el grupo y **anuncios independientes
-  dentro de cada área curricular**.
+  dentro de cada área curricular** *(locales a cada navegador: ver la nota de
+  arriba)*.
 - **Áreas curriculares**: las 11 áreas oficiales, cada una con su color y su
   propio espacio de anuncios.
 - **Usuarios**: crear cuentas de estudiante y activar o desactivar cuentas.
-- **Fotos** y **Museos virtuales**: subir imágenes y agregar recorridos.
+- **Fotos** y **Museos virtuales**: subir imágenes y agregar recorridos
+  *(locales a cada navegador: ver la nota de arriba)*.
 
 ### 🎓 Rol ESTUDIANTE
 

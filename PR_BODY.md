@@ -130,6 +130,12 @@ Limitaciones conocidas: el servidor es HTTP sin cifrar (en producción, proxy
 inverso con HTTPS), la base de datos no se cifra en reposo ni tiene copia
 automática, y `servidor/datos/` hay que respaldarlo a mano.
 
+**Alcance de esta integración:** los **anuncios** (generales y por área), las
+**fotos** y los **museos virtuales** siguen siendo **locales a cada navegador**
+(`localStorage` + `IndexedDB`): el servidor todavía no expone API para ellos y
+se comparten con **Exportar / Importar copia de seguridad**. Es lo que queda
+pendiente para la siguiente iteración.
+
 ## Notas para quien revise
 
 - **Ningún secreto en el repositorio**: `.env`, `servidor/.env`, `config.js`,
