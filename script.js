@@ -168,8 +168,7 @@ function authConfigurada() {
    El token lo emite el API y se guarda en localStorage. El servidor solo
    conserva su SHA-256 y comprueba el rol y la caducidad en cada petición. */
 function tokenSesionValido(rol) {
-  if (!window.HEMEROTECA_API || !window.HEMEROTECA_API.haySesion()) return false;
-  var usuario = estado.sesion && estado.sesion.rol ? estado.sesion : window.HEMEROTECA_API.usuarioGuardado();
+  var usuario = estado.sesion;
   if (!usuario || !usuario.rol) return false;
   if (rol && usuario.rol !== rol) return false;
   return true;
