@@ -728,17 +728,15 @@ function configurarLogin() {
     boton.textContent = 'Ingresando…';
     mostrarErrorLogin('');
 
-    window.HEMEROTECA_API.login(u, p).then(function (datos) {
+      // --- NUEVO LOGIN CON SUPABASE ---
+    supabaseClient.auth.signInWithPassword({ email: u, password: p })
+    .then(function (respuesta) {
       boton.disabled = false;
       boton.textContent = textoOriginal;
 
-      // La pestaña elegida debe coincidir con el rol real de la cuenta.
-      if (datos.usuario.rol !== rolLoginActual) {
-        window.HEMEROTECA_API.logout();
-        estado.sesion = null;
-        mostrarErrorLogin('Esa cuenta es de ' +
-          (datos.usuario.rol === ROLES.DOCENTE ? 'docente' : 'estudiante') +
-          '. Elige la pestaña correcta e inténtalo de nuevo.');
+      if (respuesta.error) {
+        mostrarErrorLogin('Usuario o contraseña incorrectos.');
+        inputPassword.select();
         return;
       }
 
@@ -749,27 +747,24 @@ function configurarLogin() {
       mostrarErrorLogin('');
 
       estado.sesion = {
-        rol: datos.usuario.rol,
-        usuario: datos.usuario.usuario,
-        nombre: datos.usuario.nombre,
+        rol: rolLoginActual,
+        usuario: u,
+        nombre: u.split('@')[0], 
         fecha: ahora(),
-        expiraEn: datos.expiraEn
+        expiraEn: Date.now() + DURACION_TOKEN_MS
       };
+      
       escribirClave(CLAVES.sesion, estado.sesion);
       irAApp();
-      toast('¡Bienvenido, ' + datos.usuario.nombre + '!', 'ok');
-    }).catch(function (err) {
+      toast('¡Bienvenido, ' + estado.sesion.nombre + '!', 'ok');
+    })
+    .catch(function (err) {
       boton.disabled = false;
       boton.textContent = textoOriginal;
-
-      if (err.estado === 429) {
-        BLOQUEO.activo = true;
-        BLOQUEO.hasta = Date.now() + (SEGUNDOS_BLOQUEO * 1000);
-        guardarEstadoBloqueo();
-      }
-      mostrarErrorLogin(err.message || 'No se pudo iniciar sesión.');
-      inputPassword.select();
+      mostrarErrorLogin('Error de conexión con el servidor.');
+      console.error(err);
     });
+    // --- FIN DEL NUEVO LOGIN ---
   }
 
   form.addEventListener('submit', intentar);
