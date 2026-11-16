@@ -175,7 +175,7 @@ function tokenSesionValido(rol) {
 }
 
 function cerrarSesion() {
-  if (window.HEMEROTECA_API) window.HEMEROTECA_API.logout();
+  if (typeof supabaseClient !== 'undefined') supabaseClient.auth.signOut();
   estado.sesion = null;
   try { localStorage.removeItem(CLAVES.sesion); } catch (e) { /* sin localStorage */ }
 }
