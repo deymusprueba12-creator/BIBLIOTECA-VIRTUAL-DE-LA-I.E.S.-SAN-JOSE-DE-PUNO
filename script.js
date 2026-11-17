@@ -1897,6 +1897,10 @@ function renderAreas() {
         '<h3 class="area-nombre">' + esc(area.nombre) + '</h3>' +
         '<span class="area-cuenta" title="Anuncios publicados">' + avisos.length + '</span>' +
       '</header>' +
+      '<div class="area-acciones">' +
+        '<button type="button" class="btn btn-sm btn-soft" data-ir-area-libros="' + esc(area.id) + '">&#128214; Ver libros del área</button>' +
+        '<button type="button" class="btn btn-sm btn-soft" data-ir-area-tareas="' + esc(area.id) + '">&#128203; Ver tareas del área</button>' +
+      '</div>' +
       '<form class="area-form solo-docente" data-area-form="' + esc(area.id) + '">' +
         '<input type="text" class="input" name="titulo" maxlength="140" placeholder="Título del anuncio" aria-label="Título del anuncio de ' + esc(area.nombre) + '" required>' +
         '<textarea class="input" name="cuerpo" rows="2" maxlength="1200" placeholder="Mensaje para esta área" aria-label="Mensaje del anuncio de ' + esc(area.nombre) + '" required></textarea>' +
@@ -2233,6 +2237,22 @@ function configurarAnuncios() {
 function configurarAreas() {
   var grid = $('#gridAreas');
   if (!grid) return;
+
+  grid.addEventListener('click', function (e) {
+    var libros = e.target.closest('[data-ir-area-libros]');
+    var tareas = e.target.closest('[data-ir-area-tareas]');
+    if (libros) {
+      var id = libros.getAttribute('data-ir-area-libros');
+      irA('libros');
+      if (window.BibliotecaUI && window.BibliotecaUI.verArea) {
+        window.BibliotecaUI.verArea(id).catch(function () { /* ya lo informa la interfaz */ });
+      }
+    } else if (tareas) {
+      var id2 = tareas.getAttribute('data-ir-area-tareas');
+      irA('tareas');
+      if (window.TareasUI && window.TareasUI.verArea) window.TareasUI.verArea(id2);
+    }
+  });
 
   grid.addEventListener('submit', function (e) {
     var form = e.target.closest('[data-area-form]');

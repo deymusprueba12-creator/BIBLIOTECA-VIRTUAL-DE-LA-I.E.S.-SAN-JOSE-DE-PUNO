@@ -244,6 +244,25 @@
     '</article>';
   }
 
+  function renderGruposTareas(lista) {
+    var areas = window.AREAS || (typeof AREAS !== 'undefined' ? AREAS : []);
+    var conocidos = {};
+    var bloques = areas.map(function (area) {
+      conocidos[area.id] = true;
+      var items = lista.filter(function (tarea) { return tarea.area === area.id; });
+      if (!items.length) return '';
+      return '<section class="area-contenido area-contenido-total" style="--area-color:' + esc(area.color || '#4f46e5') + '" aria-labelledby="tareas-area-' + esc(area.id) + '">' +
+        '<div class="area-contenido-head"><span class="area-contenido-dot"></span><h3 class="area-contenido-titulo" id="tareas-area-' + esc(area.id) + '">' + esc(area.nombre) + '</h3>' +
+        '<span class="area-contenido-cuenta">' + items.length + ' ' + (items.length === 1 ? 'tarea' : 'tareas') + '</span></div>' +
+        '<div class="grid">' + items.map(tarjetaTarea).join('') + '</div></section>';
+    }).join('');
+    var otras = lista.filter(function (tarea) { return !conocidos[tarea.area]; });
+    if (otras.length) {
+      bloques += '<section class="area-contenido area-contenido-total" style="--area-color:#64748b" aria-labelledby="tareas-area-otras"><div class="area-contenido-head"><span class="area-contenido-dot"></span><h3 class="area-contenido-titulo" id="tareas-area-otras">Otras áreas</h3><span class="area-contenido-cuenta">' + otras.length + ' ' + (otras.length === 1 ? 'tarea' : 'tareas') + '</span></div><div class="grid">' + otras.map(tarjetaTarea).join('') + '</div></section>';
+    }
+    return bloques;
+  }
+
   function renderTareas() {
     renderFiltrosTareas();
     var grid = document.getElementById('gridTareas');
@@ -258,7 +277,7 @@
           ? 'Crea la primera actividad con el formulario de arriba, asígnala a un área y publícala.'
           : 'Cuando el docente publique una actividad aparecerá aquí.') + '</p></div>';
     } else {
-      grid.innerHTML = lista.map(tarjetaTarea).join('');
+      grid.innerHTML = renderGruposTareas(lista);
     }
 
     var nota = document.getElementById('notaTareas');
@@ -965,8 +984,15 @@
     };
   }
 
+  function verArea(areaId) {
+    T.filtroArea = areaId;
+    renderTareas();
+    return T.tareas.filter(function (t) { return t.area === areaId; });
+  }
+
   window.TareasUI = {
     configurar: configurarTareas,
+    verArea: verArea,
     cargarTodo: cargarTodo,
     cargarTareas: cargarTareas,
     cargarEntregas: cargarEntregas,
