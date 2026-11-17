@@ -33,9 +33,6 @@
    o desde variables del entorno (GitHub Secrets) y contiene solo hashes.
    Si falta config.js, el login muestra un aviso de configuración. */
 var AUTH = (typeof window !== 'undefined' && window.HEMEROTECA_AUTH) || null;
-const supabaseUrl = 'https://tqvciaailkfhowdsjwhx.supabase.co'; 
-const supabaseKey = 'sb_publishable_rpJ43pOYKWkot6oWeg6Piw_5qrXm5_w'; 
-window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 var ROLES = Object.freeze({ DOCENTE: 'docente', ESTUDIANTE: 'estudiante' });
 var NOMBRE_APP = 'BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO';
 var DURACION_TOKEN_MS = 8 * 60 * 60 * 1000;
@@ -161,21 +158,22 @@ function hashRespaldo(cadena) {
 
 /** Comprueba si config.js existe y tiene las dos credenciales. */
 function authConfigurada() {
-  return true;
+  return !!(window.HEMEROTECA_API && window.HEMEROTECA_API.base);
 }
 
 /* --- Sesión del servidor ------------------------------------------------
    El token lo emite el API y se guarda en localStorage. El servidor solo
    conserva su SHA-256 y comprueba el rol y la caducidad en cada petición. */
 function tokenSesionValido(rol) {
-  var usuario = estado.sesion;
+  if (!window.HEMEROTECA_API || !window.HEMEROTECA_API.haySesion()) return false;
+  var usuario = estado.sesion && estado.sesion.rol ? estado.sesion : window.HEMEROTECA_API.usuarioGuardado();
   if (!usuario || !usuario.rol) return false;
   if (rol && usuario.rol !== rol) return false;
   return true;
 }
 
 function cerrarSesion() {
-  if (typeof supabaseClient !== 'undefined') supabaseClient.auth.signOut();
+  if (window.HEMEROTECA_API) window.HEMEROTECA_API.logout();
   estado.sesion = null;
   try { localStorage.removeItem(CLAVES.sesion); } catch (e) { /* sin localStorage */ }
 }
@@ -653,6 +651,7 @@ function irAApp() {
   // Datos compartidos: se cargan del servidor después de pintar la interfaz.
   if (window.BibliotecaUI) window.BibliotecaUI.cargar().catch(function () {});
   if (window.TareasUI) window.TareasUI.cargarTodo();
+  escucharEventos();
 }
 
 function aplicarRolEnUI() {
@@ -727,15 +726,17 @@ function configurarLogin() {
     boton.textContent = 'Ingresando…';
     mostrarErrorLogin('');
 
-      // --- NUEVO LOGIN CON SUPABASE ---
-    supabaseClient.auth.signInWithPassword({ email: u, password: p })
-    .then(function (respuesta) {
+    window.HEMEROTECA_API.login(u, p).then(function (datos) {
       boton.disabled = false;
       boton.textContent = textoOriginal;
 
-      if (respuesta.error) {
-        mostrarErrorLogin('Usuario o contraseña incorrectos.');
-        inputPassword.select();
+      // La pestaña elegida debe coincidir con el rol real de la cuenta.
+      if (datos.usuario.rol !== rolLoginActual) {
+        window.HEMEROTECA_API.logout();
+        estado.sesion = null;
+        mostrarErrorLogin('Esa cuenta es de ' +
+          (datos.usuario.rol === ROLES.DOCENTE ? 'docente' : 'estudiante') +
+          '. Elige la pestaña correcta e inténtalo de nuevo.');
         return;
       }
 
@@ -746,24 +747,27 @@ function configurarLogin() {
       mostrarErrorLogin('');
 
       estado.sesion = {
-        rol: rolLoginActual,
-        usuario: u,
-        nombre: u.split('@')[0], 
+        rol: datos.usuario.rol,
+        usuario: datos.usuario.usuario,
+        nombre: datos.usuario.nombre,
         fecha: ahora(),
-        expiraEn: Date.now() + DURACION_TOKEN_MS
+        expiraEn: datos.expiraEn
       };
-      
       escribirClave(CLAVES.sesion, estado.sesion);
       irAApp();
-      toast('¡Bienvenido, ' + estado.sesion.nombre + '!', 'ok');
-    })
-    .catch(function (err) {
+      toast('¡Bienvenido, ' + datos.usuario.nombre + '!', 'ok');
+    }).catch(function (err) {
       boton.disabled = false;
       boton.textContent = textoOriginal;
-      mostrarErrorLogin('Error de conexión con el servidor.');
-      console.error(err);
+
+      if (err.estado === 429) {
+        BLOQUEO.activo = true;
+        BLOQUEO.hasta = Date.now() + (SEGUNDOS_BLOQUEO * 1000);
+        guardarEstadoBloqueo();
+      }
+      mostrarErrorLogin(err.message || 'No se pudo iniciar sesión.');
+      inputPassword.select();
     });
-    // --- FIN DEL NUEVO LOGIN ---
   }
 
   form.addEventListener('submit', intentar);
@@ -2646,6 +2650,36 @@ function configurarGlobales() {
       }
     }).catch(function () { /* sin soporte */ });
   }
+}
+
+/* =====================================================================
+   30b. SINCRONIZACIÓN EN TIEMPO REAL (SSE)
+   ===================================================================== */
+
+var esBiblioteca = null;
+
+/**
+ * Abre y mantiene una conexión con el servidor para recibir avisos de cambios
+ * en la biblioteca. Al recibir un aviso «biblioteca», la lista se vuelve a
+ * cargar desde el servidor (con un pequeño retardo para agrupar ráfagas).
+ * Nunca se abre más de una conexión: el navegador reconecta solo.
+ */
+function escucharEventos() {
+  if (esBiblioteca || !window.HEMEROTECA_API || !window.HEMEROTECA_API.base) return;
+  try {
+    esBiblioteca = new EventSource(window.HEMEROTECA_API.base + '/api/eventos');
+  } catch (e) {
+    esBiblioteca = null;
+    return;
+  }
+  var temporizador = null;
+  esBiblioteca.addEventListener('biblioteca', function () {
+    clearTimeout(temporizador);
+    temporizador = setTimeout(function () {
+      if (window.BibliotecaUI) window.BibliotecaUI.cargar().catch(function () {});
+      if (typeof renderBadges === 'function') renderBadges();
+    }, 400);
+  });
 }
 
 /* =====================================================================
