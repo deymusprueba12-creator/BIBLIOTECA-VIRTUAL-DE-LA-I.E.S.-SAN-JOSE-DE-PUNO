@@ -306,9 +306,7 @@ Edita `servidor/.env`, borra `servidor/datos/biblioteca.sqlite` y arranca otra
 vez el servidor; o usa la gestión de usuarios de la aplicación.
 
 **«¿Hasta cuánto puedo subir?»**
-El límite lo marca `TAMANO_MAXIMO_MB` (100 MB por defecto, pensado para
-servidores pequeños) y el frontend avisa antes de subir. En `servidor/.env` se
-puede subir a 500 MB o 1 GB si el servidor tiene disco y memoria.
+El límite lo marca `TAMANO_MAXIMO_MB` (1024 MB, 1 GB, por defecto) y el frontend avisa antes de subir. En `servidor/.env` puedes reducirlo o dejarlo en 1024 MB si el servidor tiene disco y memoria.
 
 ---
 

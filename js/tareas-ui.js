@@ -624,7 +624,7 @@
     document.getElementById('entregaComentario').value = tarea.miEntrega ? '' : '';
     document.getElementById('entregaError').textContent = '';
     document.getElementById('entregaError').classList.remove('visible');
-    var max = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 25;
+    var max = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 1024;
     document.getElementById('entregaMaxMb').textContent = max;
     document.getElementById('modalEntrega').removeAttribute('hidden');
   }
@@ -654,7 +654,7 @@
       fallo('Formato no permitido. Se aceptan PDF, DOC, DOCX, JPG, JPEG y PNG.');
       return;
     }
-    var maxMb = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 25;
+    var maxMb = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 1024;
     if (archivo.size > maxMb * 1024 * 1024) {
       fallo('El archivo supera el límite de ' + maxMb + ' MB.');
       return;
@@ -772,7 +772,7 @@
 
   function configurarTareas() {
     rellenarFiltros();
-    var max = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 25;
+    var max = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 1024;
     var chip = document.getElementById('chipMaxTarea');
     if (chip) chip.textContent = max;
 

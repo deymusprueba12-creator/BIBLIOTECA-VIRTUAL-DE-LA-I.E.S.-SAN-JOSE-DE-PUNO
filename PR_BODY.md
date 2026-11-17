@@ -15,8 +15,7 @@ SQLite, más un frontend estático que speak de ella.
   de maqueta (hashes SHA-256 en el navegador) por autenticación en servidor.
 - **11 áreas curriculares** con el nombre oficial exacto y su color, cada una
   con su **propio espacio de anuncios**, independiente del bloque general.
-- **Ciclo académico completo**: libros por área (con visor de PDF/Word
-  integrated), tareas con fecha límite, fecha de publicación programada,
+- **Ciclo académico completo**: libros por área (con visor de PDF para leerlos en la aplicación), tareas con fecha límite, fecha de publicación programada,
   adjuntos y reopenura del plazo, entregas de los estudiantes, calificación con
   observaciones y notificaciones.
 - **El frontend modularizado**: `js/api.js` (comunicación con el servidor),
@@ -26,7 +25,7 @@ SQLite, más un frontend estático que speak de ella.
 - **Documentación y configuración al día**: `README.md` reescrito con la
   arquitectura real (antes describía una app «sin backend» que ya no existe),
   plantillas `.env` y `servidor/.env.example` con el límite de subida unificado
-  en 100 MB.
+  en 1 GB (1024 MB) y con lectura integrada de PDF para estudiantes.
 
 ## Arquitectura
 
@@ -71,7 +70,7 @@ Frontend estático (index.html + styles.css + script.js + js/)  ──HTTP──
 | `script.js` | Sesión contra el servidor, áreas, anuncios por área y arranque |
 | `styles.css` | Pestañas de rol, tarjetas de área, tema claro/oscuro y responsive |
 | `styles.css`, `script.js`, `scripts/generar-config.mjs` | `config.js` pasa a contener solo la URL del API y el límite de subida (sin secretos) |
-| `.env.example` | Plantilla con el límite de 100 MB documentado |
+| `.env.example` | Plantilla con el límite de 1 GB documentado |
 | `README.md` | Reescrito con la arquitectura real, la API, las pruebas y el despliegue |
 | `PR_BODY.md` | Este documento |
 

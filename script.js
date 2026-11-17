@@ -1623,6 +1623,11 @@ function abrirVisor(registro) {
 }
 
 function descargarRegistro(registro) {
+  if (registro && registro.servidor && registro.libro) {
+    return window.HEMEROTECA_API.descargarLibro(registro.libro).catch(function (err) {
+      toast(err.message || 'No se pudo descargar el archivo.', 'error', 7000);
+    });
+  }
   archivoLeer(registro.archivoId).then(function (datos) {
     if (!datos || !datos.blob) {
       toast('No se encontró el archivo en este navegador.', 'error');
@@ -1634,6 +1639,42 @@ function descargarRegistro(registro) {
     toast('No se pudo descargar el archivo.', 'error');
   });
 }
+
+// Sirve el visor usando el archivo que está en el servidor. Los estudiantes
+// y los docentes pueden abrir los libros publicados desde la biblioteca.
+function abrirVisorServidor(libro) {
+  if (!libro || !libro.id) { toast('No se pudo identificar el libro.', 'error'); return; }
+  var nombre = (libro.archivo && libro.archivo.nombre) || (libro.titulo || 'libro') + '.pdf';
+  if (!/\.pdf$/i.test(nombre)) {
+    toast('La vista previa solo está disponible para PDF. Descarga el archivo para abrirlo.', 'alerta', 7000);
+    return;
+  }
+
+  liberarVisor();
+  var tamano = (libro.archivo && libro.archivo.tamano) || 0;
+  estado.visor.registro = {
+    titulo: libro.titulo || nombre,
+    nombre: nombre,
+    tamano: tamano,
+    servidor: true,
+    libro: libro
+  };
+  $('#visorTitulo').textContent = libro.titulo || nombre;
+  $('#visorSub').textContent = nombre + ' · ' + formatearTamano(tamano);
+  $('#zoomControles').hidden = true;
+  $('#zoomNivel').textContent = '100%';
+  $('#visorBody').innerHTML = '<div class="visor-cargando"><span class="spinner"></span><p>Cargando vista previa...</p></div>';
+  $('#modalVisor').removeAttribute('hidden');
+
+  window.HEMEROTECA_API.objetoUrl('/api/libros/' + libro.id + '/archivo').then(function (url) {
+    estado.visor.url = url;
+    $('#visorBody').innerHTML =
+      '<iframe class="visor-frame" src="' + url + '#toolbar=0&view=FitH" title="Vista previa de ' + esc(libro.titulo || nombre) + '"></iframe>';
+  }).catch(function (err) {
+    $('#visorBody').innerHTML = '<div class="visor-sin-preview"><span class="ico">&#128196;</span><h3>No se pudo abrir</h3><p>' + esc(err.message || 'Error al cargar el PDF.') + '</p></div>';
+  });
+}
+window.abrirVisorServidor = abrirVisorServidor;
 
 function configurarVisor() {
   $('#visorCerrar').addEventListener('click', cerrarTodosLosModales);
@@ -2029,7 +2070,7 @@ function aplicarConfigEnUI() {
   $('#cfgVerTodas').checked = c.verTodasTareas === true;
   $('#cfgVerAnuncios').checked = c.borrarAvisosEstudiante === true;
   var limite = formatearBytes(c.limite);
-  var maxApi = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 25;
+  var maxApi = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 1024;
   $('#chipMaxLibro').textContent = maxApi + ' MB';
   $('#chipMaxTarea').textContent = maxApi;
   $('#chipMaxFoto').textContent = limite;
