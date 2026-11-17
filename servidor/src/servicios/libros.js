@@ -97,7 +97,7 @@ export function obtenerLibro({ almacen }, usuario, id) {
  * @param {object} datos campos del formulario
  * @param {{datos: Buffer, nombre: string}|null} archivo
  */
-export async function crearLibro({ almacen, config }, usuario, datos, archivo) {
+export async function crearLibro({ almacen, config, eventos }, usuario, datos, archivo) {
   exigirDocente(usuario);
 
   const titulo = textoObligatorio(datos.titulo, 'título', 300);
@@ -161,11 +161,12 @@ export async function crearLibro({ almacen, config }, usuario, datos, archivo) {
     throw err;
   }
 
+  eventos?.emitir('biblioteca');
   return obtenerLibro({ almacen }, usuario, id);
 }
 
 /** Actualiza metadatos y/o la clasificación de un libro. */
-export function actualizarLibro({ almacen }, usuario, id, cambios) {
+export function actualizarLibro({ almacen, eventos }, usuario, id, cambios) {
   exigirDocente(usuario);
 
   const fila = almacen.uno('SELECT * FROM libros WHERE id = ?', id);
@@ -202,11 +203,12 @@ export function actualizarLibro({ almacen }, usuario, id, cambios) {
     titulo, autor, descripcion, area, publicado, clasificacion, confianza, ahora(), id,
   );
 
+  eventos?.emitir('biblioteca');
   return obtenerLibro({ almacen }, usuario, id);
 }
 
 /** Elimina un libro y su archivo. */
-export async function eliminarLibro({ almacen }, usuario, id) {
+export async function eliminarLibro({ almacen, eventos }, usuario, id) {
   exigirDocente(usuario);
 
   const fila = almacen.uno('SELECT * FROM libros WHERE id = ?', id);
@@ -214,6 +216,7 @@ export async function eliminarLibro({ almacen }, usuario, id) {
 
   almacen.ejecutar('DELETE FROM libros WHERE id = ?', id);
   if (fila.archivo_id) await borrarArchivo(almacen, fila.archivo_id);
+  eventos?.emitir('biblioteca');
 }
 
 /** Descarga el archivo de un libro con comprobación de permisos. */

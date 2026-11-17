@@ -66,6 +66,12 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
 
   router.add('GET', '/api/areas', async () => ({ datos: { areas: AREAS } }), { acceso: 'publico' });
 
+  // Señales en tiempo real (SSE). Solo avisa de cambios; no envía datos.
+  router.add('GET', '/api/eventos', ({ req, res }) => {
+    ctx.eventos.manejarSSE(req, res);
+    return { stream: true };
+  }, { acceso: 'publico' });
+
   /* -------------------------------- Sesión ------------------------------- */
 
   router.add('POST', '/api/auth/login', async (c) => {

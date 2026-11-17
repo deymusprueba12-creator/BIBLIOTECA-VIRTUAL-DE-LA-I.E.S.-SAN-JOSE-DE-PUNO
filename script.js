@@ -651,6 +651,7 @@ function irAApp() {
   // Datos compartidos: se cargan del servidor después de pintar la interfaz.
   if (window.BibliotecaUI) window.BibliotecaUI.cargar().catch(function () {});
   if (window.TareasUI) window.TareasUI.cargarTodo();
+  escucharEventos();
 }
 
 function aplicarRolEnUI() {
@@ -2649,6 +2650,36 @@ function configurarGlobales() {
       }
     }).catch(function () { /* sin soporte */ });
   }
+}
+
+/* =====================================================================
+   30b. SINCRONIZACIÓN EN TIEMPO REAL (SSE)
+   ===================================================================== */
+
+var esBiblioteca = null;
+
+/**
+ * Abre y mantiene una conexión con el servidor para recibir avisos de cambios
+ * en la biblioteca. Al recibir un aviso «biblioteca», la lista se vuelve a
+ * cargar desde el servidor (con un pequeño retardo para agrupar ráfagas).
+ * Nunca se abre más de una conexión: el navegador reconecta solo.
+ */
+function escucharEventos() {
+  if (esBiblioteca || !window.HEMEROTECA_API || !window.HEMEROTECA_API.base) return;
+  try {
+    esBiblioteca = new EventSource(window.HEMEROTECA_API.base + '/api/eventos');
+  } catch (e) {
+    esBiblioteca = null;
+    return;
+  }
+  var temporizador = null;
+  esBiblioteca.addEventListener('biblioteca', function () {
+    clearTimeout(temporizador);
+    temporizador = setTimeout(function () {
+      if (window.BibliotecaUI) window.BibliotecaUI.cargar().catch(function () {});
+      if (typeof renderBadges === 'function') renderBadges();
+    }, 400);
+  });
 }
 
 /* =====================================================================

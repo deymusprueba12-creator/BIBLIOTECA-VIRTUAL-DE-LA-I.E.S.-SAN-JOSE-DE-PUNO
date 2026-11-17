@@ -11,6 +11,7 @@ import { CONFIG } from './config.js';
 import { crearAlmacen } from './bd/almacen.js';
 import { crearRutas } from './rutas.js';
 import { usuarioPorToken, asegurarUsuariosIniciales } from './servicios/usuarios.js';
+import { crearBusEventos } from './eventos.js';
 import {
   ErrorHttp,
   aplicarCors,
@@ -40,7 +41,7 @@ export async function iniciarAplicacion({ config = CONFIG } = {}) {
     rutaArchivos: config.rutaArchivos,
   });
 
-  const ctx = { almacen, config };
+  const ctx = { almacen, config, eventos: crearBusEventos() };
   const router = crearRutas(ctx, { version: VERSION });
 
   await asegurarUsuariosIniciales(ctx);
@@ -87,6 +88,9 @@ export async function iniciarAplicacion({ config = CONFIG } = {}) {
         usuario,
         token,
       });
+
+      // El endpoint SSE mantiene la conexión abierta; no es JSON ni archivo.
+      if (resultado && resultado.stream) return;
 
       if (resultado && resultado.archivo) {
         responderArchivo(res, resultado.archivo, { descarga: !resultado.inline });
