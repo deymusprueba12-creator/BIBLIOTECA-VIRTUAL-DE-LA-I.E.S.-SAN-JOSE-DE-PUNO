@@ -219,6 +219,25 @@
     '</article>';
   }
 
+  function renderGruposLibros(lista) {
+    var areas = window.AREAS || (typeof AREAS !== 'undefined' ? AREAS : []);
+    var conocidos = {};
+    var bloques = areas.map(function (area) {
+      conocidos[area.id] = true;
+      var items = lista.filter(function (libro) { return libro.area === area.id; });
+      if (!items.length) return '';
+      return '<section class="area-contenido area-contenido-total" style="--area-color:' + esc(area.color || '#4f46e5') + '" aria-labelledby="libros-area-' + esc(area.id) + '">' +
+        '<div class="area-contenido-head"><span class="area-contenido-dot"></span><h3 class="area-contenido-titulo" id="libros-area-' + esc(area.id) + '">' + esc(area.nombre) + '</h3>' +
+        '<span class="area-contenido-cuenta">' + items.length + ' ' + (items.length === 1 ? 'libro' : 'libros') + '</span></div>' +
+        '<div class="grid">' + items.map(tarjeta).join('') + '</div></section>';
+    }).join('');
+    var otros = lista.filter(function (libro) { return !conocidos[libro.area]; });
+    if (otros.length) {
+      bloques += '<section class="area-contenido area-contenido-total" style="--area-color:#64748b" aria-labelledby="libros-area-otras"><div class="area-contenido-head"><span class="area-contenido-dot"></span><h3 class="area-contenido-titulo" id="libros-area-otras">Otras áreas</h3><span class="area-contenido-cuenta">' + otros.length + ' ' + (otros.length === 1 ? 'libro' : 'libros') + '</span></div><div class="grid">' + otros.map(tarjeta).join('') + '</div></section>';
+    }
+    return bloques;
+  }
+
   function render() {
     renderFiltros();
     var contenedor = document.getElementById('gridLibros');
@@ -233,7 +252,7 @@
           : 'El docente todavía no ha publicado libros. Vuelve más tarde.'
       );
     } else {
-      contenedor.innerHTML = UI.libros.map(tarjeta).join('');
+      contenedor.innerHTML = renderGruposLibros(UI.libros);
     }
 
     var nota = document.getElementById('notaBiblioteca');
@@ -525,6 +544,11 @@
     });
   }
 
+  function verArea(areaId) {
+    estado.filtros.libro = areaId;
+    return cargar({ area: areaId });
+  }
+
   function nombreDesdeArchivo(nombre) {
     return String(nombre || '')
       .replace(/\.[A-Za-z0-9]+$/, '')
@@ -540,6 +564,7 @@
     render: render,
     editar: editar,
     cancelarEdicion: cancelarEdicion,
+    verArea: verArea,
     libros: function () { return UI.libros; }
   };
 })();
