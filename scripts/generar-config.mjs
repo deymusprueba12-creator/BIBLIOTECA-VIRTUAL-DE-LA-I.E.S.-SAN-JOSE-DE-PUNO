@@ -26,7 +26,7 @@ const RUTA_CONFIG = join(RAIZ, 'config.js');
 const ARCHIVOS_ENV = [join(RAIZ, '.env'), join(RAIZ, 'servidor', '.env')];
 
 const API_POR_DEFECTO = 'http://127.0.0.1:3000';
-const MAX_MB_POR_DEFECTO = 25;
+const MAX_MB_POR_DEFECTO = 1024;
 
 function leerArchivoEnv(ruta) {
   if (!existsSync(ruta)) return {};

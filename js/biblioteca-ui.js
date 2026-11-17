@@ -194,6 +194,10 @@
       ? '<button type="button" class="btn btn-sm btn-soft" data-accion="editar">Editar</button>' +
         '<button type="button" class="btn btn-sm btn-peligro" data-accion="eliminar" aria-label="Eliminar libro">Eliminar</button>'
       : '';
+    var esPdf = libro.archivo && String(libro.archivo.nombre || '').toLowerCase().endsWith('.pdf');
+    var botonLeer = esPdf
+      ? '<button type="button" class="btn btn-sm btn-primario" data-accion="leer">Leer</button>'
+      : '';
 
     return '<article class="card card-libro" data-id="' + esc(libro.id) + '">' +
       '<div class="card-media libro-media" style="--area-color:' + esc(colorArea(libro.area)) + '">' +
@@ -207,7 +211,8 @@
           (libro.archivo ? '<span class="tag">' + esc(String(libro.archivo.nombre).split('.').pop().toUpperCase()) + '</span>' : '') +
         '</div>' +
         '<div class="card-foot">' +
-          '<button type="button" class="btn btn-sm btn-primario" data-accion="descargar">Descargar</button>' +
+          botonLeer +
+          '<button type="button" class="btn btn-sm btn-soft" data-accion="descargar">Descargar</button>' +
           accionesDoc +
         '</div>' +
       '</div>' +
@@ -391,7 +396,7 @@
   }
 
   function limiteBytes() {
-    var max = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 25;
+    var max = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 1024;
     return max * 1024 * 1024;
   }
 
@@ -401,7 +406,7 @@
 
   function configurar() {
     rellenarAreas();
-    var max = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 25;
+    var max = (window.HEMEROTECA_CONFIG && window.HEMEROTECA_CONFIG.maxMb) || 1024;
     var chip = document.getElementById('chipMaxLibro');
     if (chip) chip.textContent = max + ' MB';
 
@@ -485,7 +490,17 @@
       if (!libro) return;
       var accion = boton.getAttribute('data-accion');
 
-      if (accion === 'descargar') {
+      if (accion === 'leer') {
+        boton.disabled = true;
+        try {
+          if (window.abrirVisorServidor) { window.abrirVisorServidor(libro); }
+          else toast('El visor no está disponible.', 'error');
+        } catch (err) {
+          toast(err.message || 'No se pudo abrir el libro.', 'error', 7000);
+        } finally {
+          boton.disabled = false;
+        }
+      } else if (accion === 'descargar') {
         boton.disabled = true;
         api().descargarLibro(libro).then(function () {
           boton.disabled = false;
