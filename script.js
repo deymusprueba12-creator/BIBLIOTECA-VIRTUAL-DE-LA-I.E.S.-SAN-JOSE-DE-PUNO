@@ -15,12 +15,13 @@
 'use strict';
 
 // ==========================================
-// CONFIGURACIÓN INTELIGENTE DE LA API
+// CONFIGURACIÓN INTELIGENTE DE LA API (GLOBAL)
 // ==========================================
 const esLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_URL = esLocal
+window.API_URL = esLocal
     ? 'http://localhost:3210'
     : 'https://hemeroteca-backend.onrender.com';
+const API_URL = window.API_URL;
 // ==========================================
 
 

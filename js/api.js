@@ -15,7 +15,7 @@
   'use strict';
 
   var CONFIG = window.HEMEROTECA_CONFIG || {};
-  var BASE = String(CONFIG.apiUrl || 'http://127.0.0.1:3000').replace(/\/+$/, '');
+   var BASE = String(window.API_URL || CONFIG.apiUrl || 'https://hemeroteca-backend.onrender.com').replace(/\/+$/, '');
   var CLAVE_TOKEN = 'hemeroteca_api_token';
   var CLAVE_USUARIO = 'hemeroteca_api_usuario';
 
