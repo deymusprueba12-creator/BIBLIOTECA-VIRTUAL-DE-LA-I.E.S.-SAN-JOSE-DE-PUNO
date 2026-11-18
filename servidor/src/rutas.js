@@ -86,7 +86,7 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
   }, { acceso: 'publico' });
 
   router.add('POST', '/api/auth/logout', async (c) => {
-    cerrarSesion(ctx, c.token);
+    await cerrarSesion(ctx, c.token);
     return { datos: { ok: true } };
   }, { acceso: 'cualquiera' });
 
@@ -97,7 +97,7 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
   /* ------------------------------- Usuarios ------------------------------ */
 
   router.add('GET', '/api/usuarios', async (c) => ({
-    datos: { usuarios: listarUsuarios(ctx, { rol: c.query.rol }) },
+    datos: { usuarios: await listarUsuarios(ctx, { rol: c.query.rol }) },
   }), { acceso: 'docente' });
 
   router.add('POST', '/api/usuarios', async (c) => {
@@ -121,7 +121,7 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
 
   router.add('GET', '/api/libros', async (c) => ({
     datos: {
-      libros: listarLibros(ctx, c.usuario, {
+      libros: await listarLibros(ctx, c.usuario, {
         area: c.query.area,
         q: c.query.q,
         autor: c.query.autor,
@@ -130,7 +130,7 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
   }), { acceso: 'cualquiera' });
 
   router.add('GET', '/api/libros/:id', async (c) => ({
-    datos: { libro: obtenerLibro(ctx, c.usuario, id(c.params)) },
+    datos: { libro: await obtenerLibro(ctx, c.usuario, id(c.params)) },
   }), { acceso: 'cualquiera' });
 
   router.add('POST', '/api/libros', async (c) => {
@@ -141,7 +141,7 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
 
   router.add('PATCH', '/api/libros/:id', async (c) => {
     const datos = await json(c.req);
-    const libro = actualizarLibro(ctx, c.usuario, id(c.params), datos);
+    const libro = await actualizarLibro(ctx, c.usuario, id(c.params), datos);
     return { datos: { libro } };
   }, { acceso: 'docente' });
 
@@ -159,7 +159,7 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
 
   router.add('GET', '/api/tareas', async (c) => ({
     datos: {
-      tareas: listarTareas(ctx, c.usuario, {
+      tareas: await listarTareas(ctx, c.usuario, {
         area: c.query.area,
         estado: c.query.estado,
         q: c.query.q,
@@ -168,18 +168,18 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
   }), { acceso: 'cualquiera' });
 
   router.add('GET', '/api/tareas/:id', async (c) => ({
-    datos: { tarea: obtenerTarea(ctx, c.usuario, id(c.params)) },
+    datos: { tarea: await obtenerTarea(ctx, c.usuario, id(c.params)) },
   }), { acceso: 'cualquiera' });
 
   router.add('POST', '/api/tareas', async (c) => {
     const datos = await json(c.req);
-    const tarea = crearTarea(ctx, c.usuario, datos);
+    const tarea = await crearTarea(ctx, c.usuario, datos);
     return { estado: 201, datos: { tarea } };
   }, { acceso: 'docente' });
 
   router.add('PATCH', '/api/tareas/:id', async (c) => {
     const datos = await json(c.req);
-    const tarea = actualizarTarea(ctx, c.usuario, id(c.params), datos);
+    const tarea = await actualizarTarea(ctx, c.usuario, id(c.params), datos);
     return { datos: { tarea } };
   }, { acceso: 'docente' });
 
@@ -190,7 +190,7 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
 
   router.add('POST', '/api/tareas/:id/publicacion', async (c) => {
     const datos = await json(c.req);
-    const tarea = cambiarPublicacion(ctx, c.usuario, id(c.params), datos.publicada === true);
+    const tarea = await cambiarPublicacion(ctx, c.usuario, id(c.params), datos.publicada === true);
     return { datos: { tarea } };
   }, { acceso: 'docente' });
 
@@ -214,7 +214,7 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
 
   router.add('GET', '/api/entregas', async (c) => ({
     datos: {
-      entregas: listarEntregas(ctx, c.usuario, {
+      entregas: await listarEntregas(ctx, c.usuario, {
         area: c.query.area,
         tarea: c.query.tarea,
         estudiante: c.query.estudiante,
@@ -226,7 +226,7 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
   }), { acceso: 'cualquiera' });
 
   router.add('GET', '/api/entregas/:id', async (c) => ({
-    datos: { entrega: obtenerEntrega(ctx, c.usuario, id(c.params)) },
+    datos: { entrega: await obtenerEntrega(ctx, c.usuario, id(c.params)) },
   }), { acceso: 'cualquiera' });
 
   router.add('POST', '/api/tareas/:id/entregas', async (c) => {
@@ -238,13 +238,13 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
   router.add('GET', '/api/tareas/:id/entregas', async (c) => {
     exigirDocente(c.usuario);
     return {
-      datos: { entregas: listarEntregas(ctx, c.usuario, { tarea: id(c.params) }) },
+      datos: { entregas: await listarEntregas(ctx, c.usuario, { tarea: id(c.params) }) },
     };
   }, { acceso: 'docente' });
 
   router.add('PATCH', '/api/entregas/:id', async (c) => {
     const datos = await json(c.req);
-    const entrega = calificarEntrega(ctx, c.usuario, id(c.params), datos);
+    const entrega = await calificarEntrega(ctx, c.usuario, id(c.params), datos);
     return { datos: { entrega } };
   }, { acceso: 'docente' });
 
@@ -257,7 +257,7 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
 
   router.add('GET', '/api/calificaciones', async (c) => ({
     datos: {
-      calificaciones: listarCalificaciones(ctx, c.usuario, {
+      calificaciones: await listarCalificaciones(ctx, c.usuario, {
         area: c.query.area,
         estudiante: c.query.estudiante,
       }),
@@ -268,20 +268,20 @@ export function crearRutas(ctx, { version = '1.0.0' } = {}) {
 
   router.add('GET', '/api/notificaciones', async (c) => ({
     datos: {
-      notificaciones: listarNotificaciones(ctx, c.usuario, {
+      notificaciones: await listarNotificaciones(ctx, c.usuario, {
         soloNoLeidas: c.query.soloNoLeidas === '1',
       }),
-      sinLeer: contarNoLeidas(ctx, c.usuario),
+      sinLeer: await contarNoLeidas(ctx, c.usuario),
     },
   }), { acceso: 'cualquiera' });
 
   router.add('GET', '/api/notificaciones/contador', async (c) => ({
-    datos: { sinLeer: contarNoLeidas(ctx, c.usuario) },
+    datos: { sinLeer: await contarNoLeidas(ctx, c.usuario) },
   }), { acceso: 'cualquiera' });
 
   router.add('POST', '/api/notificaciones/leidas', async (c) => {
     const datos = await json(c.req);
-    return { datos: { sinLeer: marcarLeidas(ctx, c.usuario, datos) } };
+    return { datos: { sinLeer: await marcarLeidas(ctx, c.usuario, datos) } };
   }, { acceso: 'cualquiera' });
 
   return router;

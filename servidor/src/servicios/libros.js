@@ -12,7 +12,7 @@ import { createHash } from 'node:crypto';
 import { ErrorHttp } from '../lib/http.js';
 import { ahora } from '../bd/almacen.js';
 import { nuevoId } from '../lib/seguridad.js';
-import { guardarArchivo, leerArchivo, borrarArchivo, PERMITIDOS } from '../lib/archivos.js';
+import { guardarArchivo, resolverArchivo, borrarArchivo, PERMITIDOS } from '../lib/archivos.js';
 import {
   textoObligatorio,
   textoOpcional,
@@ -52,7 +52,7 @@ const CONSULTA = `
     LEFT JOIN archivos a ON a.id = l.archivo_id`;
 
 /** Lista libros con filtros de área, texto y autor. */
-export function listarLibros({ almacen }, usuario, { area, q, autor } = {}) {
+export async function listarLibros({ almacen }, usuario, { area, q, autor } = {}) {
   const condiciones = [];
   const params = [];
 
@@ -74,7 +74,7 @@ export function listarLibros({ almacen }, usuario, { area, q, autor } = {}) {
   }
 
   const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
-  const filas = almacen.todos(
+  const filas = await almacen.todos(
     `${CONSULTA} ${where} ORDER BY l.creado_en DESC`,
     ...params,
   );
@@ -83,8 +83,8 @@ export function listarLibros({ almacen }, usuario, { area, q, autor } = {}) {
 }
 
 /** Devuelve un libro o lanza 404 (y 403 si un estudiante pide uno sin publicar). */
-export function obtenerLibro({ almacen }, usuario, id) {
-  const fila = almacen.uno(`${CONSULTA} WHERE l.id = ?`, id);
+export async function obtenerLibro({ almacen }, usuario, id) {
+  const fila = await almacen.uno(`${CONSULTA} WHERE l.id = ?`, id);
   if (!fila) throw new ErrorHttp(404, 'El libro no existe.');
   if (!fila.publicado && (!usuario || usuario.rol !== 'docente')) {
     throw new ErrorHttp(403, 'Ese libro no está publicado.');
@@ -113,7 +113,7 @@ export async function crearLibro({ almacen, config, eventos }, usuario, datos, a
 
   // Duplicado exacto: mismo contenido ya registrado en la biblioteca.
   const sha = createHash('sha256').update(archivo.datos).digest('hex');
-  const duplicado = almacen.uno(
+  const duplicado = await almacen.uno(
     `SELECT l.titulo
        FROM libros l
        JOIN archivos a ON a.id = l.archivo_id
@@ -137,7 +137,7 @@ export async function crearLibro({ almacen, config, eventos }, usuario, datos, a
   const momento = ahora();
 
   try {
-    almacen.ejecutar(
+    await almacen.ejecutar(
       `INSERT INTO libros
          (id, titulo, autor, descripcion, area, archivo_id, clasificacion,
           confianza, publicado, docente_id, creado_en, actualizado_en)
@@ -162,14 +162,14 @@ export async function crearLibro({ almacen, config, eventos }, usuario, datos, a
   }
 
   eventos?.emitir('biblioteca');
-  return obtenerLibro({ almacen }, usuario, id);
+  return await obtenerLibro({ almacen }, usuario, id);
 }
 
 /** Actualiza metadatos y/o la clasificación de un libro. */
-export function actualizarLibro({ almacen, eventos }, usuario, id, cambios) {
+export async function actualizarLibro({ almacen, eventos }, usuario, id, cambios) {
   exigirDocente(usuario);
 
-  const fila = almacen.uno('SELECT * FROM libros WHERE id = ?', id);
+  const fila = await almacen.uno('SELECT * FROM libros WHERE id = ?', id);
   if (!fila) throw new ErrorHttp(404, 'El libro no existe.');
 
   const titulo = cambios.titulo !== undefined
@@ -195,7 +195,7 @@ export function actualizarLibro({ almacen, eventos }, usuario, id, cambios) {
         : fila.clasificacion);
   const confianza = cambioArea ? 0 : fila.confianza;
 
-  almacen.ejecutar(
+  await almacen.ejecutar(
     `UPDATE libros
         SET titulo = ?, autor = ?, descripcion = ?, area = ?, publicado = ?,
             clasificacion = ?, confianza = ?, actualizado_en = ?
@@ -204,24 +204,24 @@ export function actualizarLibro({ almacen, eventos }, usuario, id, cambios) {
   );
 
   eventos?.emitir('biblioteca');
-  return obtenerLibro({ almacen }, usuario, id);
+  return await obtenerLibro({ almacen }, usuario, id);
 }
 
 /** Elimina un libro y su archivo. */
 export async function eliminarLibro({ almacen, eventos }, usuario, id) {
   exigirDocente(usuario);
 
-  const fila = almacen.uno('SELECT * FROM libros WHERE id = ?', id);
+  const fila = await almacen.uno('SELECT * FROM libros WHERE id = ?', id);
   if (!fila) throw new ErrorHttp(404, 'El libro no existe.');
 
-  almacen.ejecutar('DELETE FROM libros WHERE id = ?', id);
+  await almacen.ejecutar('DELETE FROM libros WHERE id = ?', id);
   if (fila.archivo_id) await borrarArchivo(almacen, fila.archivo_id);
   eventos?.emitir('biblioteca');
 }
 
 /** Descarga el archivo de un libro con comprobación de permisos. */
 export async function archivoDeLibro({ almacen }, usuario, id) {
-  const fila = almacen.uno(
+  const fila = await almacen.uno(
     `SELECT l.publicado, a.*
        FROM libros l
        JOIN archivos a ON a.id = l.archivo_id
@@ -235,8 +235,6 @@ export async function archivoDeLibro({ almacen }, usuario, id) {
   }
 
   return {
-    datos: await leerArchivo(almacen, fila),
-    nombre: fila.nombre_original,
-    mime: fila.mime,
+    ...(await resolverArchivo(almacen, fila)),
   };
 }

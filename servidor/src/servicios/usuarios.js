@@ -48,7 +48,7 @@ function publico(fila) {
  * Las contraseñas deben venir del entorno; nunca del repositorio.
  */
 export async function asegurarUsuariosIniciales({ almacen, config }) {
-  const total = almacen.uno('SELECT COUNT(*) AS n FROM usuarios').n;
+  const total = (await almacen.uno('SELECT COUNT(*) AS n FROM usuarios')).n;
   if (total > 0) return;
 
   const iniciales = [
@@ -83,8 +83,8 @@ function claveIntento(ip, usuario) {
   return `${ip || 'desconocida'}|${String(usuario || '').toLowerCase()}`;
 }
 
-function comprobarBloqueo(almacen, config, clave) {
-  const fila = almacen.uno('SELECT * FROM intentos_acceso WHERE clave = ?', clave);
+async function comprobarBloqueo(almacen, config, clave) {
+  const fila = await almacen.uno('SELECT * FROM intentos_acceso WHERE clave = ?', clave);
   if (!fila || !fila.bloqueado_hasta) return;
 
   if (Date.parse(fila.bloqueado_hasta) > Date.now()) {
@@ -93,18 +93,18 @@ function comprobarBloqueo(almacen, config, clave) {
   }
 
   // El bloqueo ya expiró: se reinicia el contador.
-  almacen.ejecutar('DELETE FROM intentos_acceso WHERE clave = ?', clave);
+  await almacen.ejecutar('DELETE FROM intentos_acceso WHERE clave = ?', clave);
 }
 
-function registrarFallo(almacen, config, clave) {
-  const fila = almacen.uno('SELECT * FROM intentos_acceso WHERE clave = ?', clave);
+async function registrarFallo(almacen, config, clave) {
+  const fila = await almacen.uno('SELECT * FROM intentos_acceso WHERE clave = ?', clave);
   const fallos = (fila ? fila.fallos : 0) + 1;
   const bloquear = fallos >= config.limiteIntentos;
   const hasta = bloquear
     ? new Date(Date.now() + config.bloqueoSegundos * 1000).toISOString()
     : null;
 
-  almacen.ejecutar(
+  await almacen.ejecutar(
     `INSERT INTO intentos_acceso (clave, fallos, bloqueado_hasta, actualizado_en)
      VALUES (?, ?, ?, ?)
      ON CONFLICT (clave) DO UPDATE SET
@@ -130,9 +130,9 @@ export async function iniciarSesion({ almacen, config }, { usuario, contrasena, 
   }
 
   const clave = claveIntento(ip, nombreUsuario);
-  comprobarBloqueo(almacen, config, clave);
+  await comprobarBloqueo(almacen, config, clave);
 
-  const fila = almacen.uno(
+  const fila = await almacen.uno(
     'SELECT * FROM usuarios WHERE usuario = ? COLLATE NOCASE',
     nombreUsuario,
   );
@@ -142,21 +142,21 @@ export async function iniciarSesion({ almacen, config }, { usuario, contrasena, 
     : false;
 
   if (!valida) {
-    const restantes = registrarFallo(almacen, config, clave);
+    const restantes = await registrarFallo(almacen, config, clave);
     // Mensaje idéntico para usuario inexistente y contraseña incorrecta.
     throw new ErrorHttp(401, `Usuario o contraseña incorrectos. Quedan ${restantes} intentos.`);
   }
 
-  almacen.ejecutar('DELETE FROM intentos_acceso WHERE clave = ?', clave);
+  await almacen.ejecutar('DELETE FROM intentos_acceso WHERE clave = ?', clave);
 
   // Limpieza de sesiones caducadas.
-  almacen.ejecutar('DELETE FROM sesiones WHERE expira_en <= ?', ahora());
+  await almacen.ejecutar('DELETE FROM sesiones WHERE expira_en <= ?', ahora());
 
   const token = generarToken();
   const creada = ahora();
   const expira = new Date(Date.now() + config.duracionSesionHoras * 3600 * 1000).toISOString();
 
-  almacen.ejecutar(
+  await almacen.ejecutar(
     'INSERT INTO sesiones (token_hash, usuario_id, creada_en, expira_en) VALUES (?, ?, ?, ?)',
     hashToken(token), fila.id, creada, expira,
   );
@@ -165,10 +165,10 @@ export async function iniciarSesion({ almacen, config }, { usuario, contrasena, 
 }
 
 /** Devuelve el usuario autenticado o null. */
-export function usuarioPorToken({ almacen }, token) {
+export async function usuarioPorToken({ almacen }, token) {
   if (!token) return null;
 
-  const fila = almacen.uno(
+  const fila = await almacen.uno(
     `SELECT u.*, s.expira_en
        FROM sesiones s
        JOIN usuarios u ON u.id = s.usuario_id
@@ -178,7 +178,7 @@ export function usuarioPorToken({ almacen }, token) {
 
   if (!fila) return null;
   if (Date.parse(fila.expira_en) <= Date.now()) {
-    almacen.ejecutar('DELETE FROM sesiones WHERE token_hash = ?', hashToken(token));
+    await almacen.ejecutar('DELETE FROM sesiones WHERE token_hash = ?', hashToken(token));
     return null;
   }
   if (!fila.activo) return null;
@@ -186,19 +186,19 @@ export function usuarioPorToken({ almacen }, token) {
   return publico(fila);
 }
 
-export function cerrarSesion({ almacen }, token) {
+export async function cerrarSesion({ almacen }, token) {
   if (!token) return;
-  almacen.ejecutar('DELETE FROM sesiones WHERE token_hash = ?', hashToken(token));
+  await almacen.ejecutar('DELETE FROM sesiones WHERE token_hash = ?', hashToken(token));
 }
 
 /* --------------------------------------------------------------------------
    Administración de usuarios (solo docente)
    -------------------------------------------------------------------------- */
 
-export function listarUsuarios({ almacen }, { rol } = {}) {
+export async function listarUsuarios({ almacen }, { rol } = {}) {
   const filas = rol
-    ? almacen.todos('SELECT * FROM usuarios WHERE rol = ? ORDER BY nombre COLLATE NOCASE', rol)
-    : almacen.todos('SELECT * FROM usuarios ORDER BY rol, nombre COLLATE NOCASE');
+    ? await almacen.todos('SELECT * FROM usuarios WHERE rol = ? ORDER BY nombre COLLATE NOCASE', rol)
+    : await almacen.todos('SELECT * FROM usuarios ORDER BY rol, nombre COLLATE NOCASE');
 
   return filas.map(publico);
 }
@@ -208,7 +208,7 @@ export async function crearUsuario({ almacen }, { usuario, nombre, rol, contrase
   const usuarioFinal = usuarioValido(usuario);
 
   if (!permitirPrimero) {
-    const existe = almacen.uno('SELECT id FROM usuarios WHERE usuario = ? COLLATE NOCASE', usuarioFinal);
+    const existe = await almacen.uno('SELECT id FROM usuarios WHERE usuario = ? COLLATE NOCASE', usuarioFinal);
     if (existe) throw new ErrorHttp(409, 'Ya existe un usuario con ese nombre.');
   }
 
@@ -217,18 +217,18 @@ export async function crearUsuario({ almacen }, { usuario, nombre, rol, contrase
   const id = nuevoId();
   const momento = ahora();
 
-  almacen.ejecutar(
+  await almacen.ejecutar(
     `INSERT INTO usuarios (id, usuario, nombre, rol, hash, salt, activo, creado_en, actualizado_en)
      VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
     id, usuarioFinal, textoObligatorio(nombre || usuarioFinal, 'nombre', 120),
     rolFinal, hash, salt, momento, momento,
   );
 
-  return publico(almacen.uno('SELECT * FROM usuarios WHERE id = ?', id));
+  return publico(await almacen.uno('SELECT * FROM usuarios WHERE id = ?', id));
 }
 
 export async function actualizarUsuario({ almacen }, id, cambios) {
-  const fila = almacen.uno('SELECT * FROM usuarios WHERE id = ?', id);
+  const fila = await almacen.uno('SELECT * FROM usuarios WHERE id = ?', id);
   if (!fila) throw new ErrorHttp(404, 'El usuario no existe.');
 
   const nombre = cambios.nombre !== undefined
@@ -245,17 +245,17 @@ export async function actualizarUsuario({ almacen }, id, cambios) {
     salt = nueva.salt;
   }
 
-  almacen.ejecutar(
+  await almacen.ejecutar(
     'UPDATE usuarios SET nombre = ?, activo = ?, hash = ?, salt = ?, actualizado_en = ? WHERE id = ?',
     nombre, activo, hash, salt, ahora(), id,
   );
 
   // Si se desactiva o cambia la contraseña, se cierran sus sesiones.
   if (!activo || cambios.contrasena) {
-    almacen.ejecutar('DELETE FROM sesiones WHERE usuario_id = ?', id);
+    await almacen.ejecutar('DELETE FROM sesiones WHERE usuario_id = ?', id);
   }
 
-  return publico(almacen.uno('SELECT * FROM usuarios WHERE id = ?', id));
+  return publico(await almacen.uno('SELECT * FROM usuarios WHERE id = ?', id));
 }
 
 /** Docente autenticado, o error 403. */

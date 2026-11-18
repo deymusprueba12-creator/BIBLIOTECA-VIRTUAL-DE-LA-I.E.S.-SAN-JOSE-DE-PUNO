@@ -12,7 +12,7 @@
 import { ErrorHttp } from '../lib/http.js';
 import { ahora } from '../bd/almacen.js';
 import { nuevoId } from '../lib/seguridad.js';
-import { guardarArchivo, leerArchivo, borrarArchivo, PERMITIDOS } from '../lib/archivos.js';
+import { guardarArchivo, resolverArchivo, borrarArchivo, PERMITIDOS } from '../lib/archivos.js';
 import {
   textoObligatorio,
   textoOpcional,
@@ -99,8 +99,8 @@ function mapTarea(fila, usuario) {
  * Publica automáticamente las tareas programadas cuya fecha ya llegó.
  * Se ejecuta de forma perezosa al consultar, sin necesidad de cron.
  */
-export function publicarProgramadas({ almacen }) {
-  const pendientes = almacen.todos(
+export async function publicarProgramadas({ almacen }) {
+  const pendientes = await almacen.todos(
     `SELECT * FROM tareas
       WHERE publicada = 0
         AND fecha_publicacion IS NOT NULL
@@ -109,11 +109,11 @@ export function publicarProgramadas({ almacen }) {
   );
 
   for (const tarea of pendientes) {
-    almacen.ejecutar(
+    await almacen.ejecutar(
       'UPDATE tareas SET publicada = 1, publicada_en = ?, actualizado_en = ? WHERE id = ?',
       tarea.fecha_publicacion, ahora(), tarea.id,
     );
-    notificarEstudiantes({ almacen }, {
+    await notificarEstudiantes({ almacen }, {
       tipo: TIPOS.TAREA_NUEVA,
       titulo: `Nueva tarea publicada: «${tarea.titulo}»`,
       detalle: tarea.limite_en ? `Fecha límite: ${tarea.limite_en}.` : 'Sin fecha límite.',
@@ -125,8 +125,8 @@ export function publicarProgramadas({ almacen }) {
 }
 
 /** Lista tareas según el rol. */
-export function listarTareas({ almacen }, usuario, { area, estado, q } = {}) {
-  publicarProgramadas({ almacen });
+export async function listarTareas({ almacen }, usuario, { area, estado, q } = {}) {
+  await publicarProgramadas({ almacen });
 
   const esDocente = usuario.rol === 'docente';
   const condiciones = [];
@@ -136,7 +136,7 @@ export function listarTareas({ almacen }, usuario, { area, estado, q } = {}) {
   if (!esDocente) {
     condiciones.push('t.publicada = 1');
     joinParams.push(usuario.id);
-    avisarProximosVencimientos({ almacen }, usuario);
+    await avisarProximosVencimientos({ almacen }, usuario);
   }
 
   if (area) {
@@ -154,7 +154,7 @@ export function listarTareas({ almacen }, usuario, { area, estado, q } = {}) {
   const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
   const paramsConJoin = [...joinParams, ...params];
 
-  const filas = almacen.todos(
+  const filas = await almacen.todos(
     `${sqlTarea(esDocente)} ${where} ORDER BY t.publicada DESC, t.creado_en DESC`,
     ...paramsConJoin,
   );
@@ -164,7 +164,7 @@ export function listarTareas({ almacen }, usuario, { area, estado, q } = {}) {
   // La lista también lleva los adjuntos para que las tarjetas puedan
   // mostrarlos y descargarlos sin pedir el detalle de cada tarea.
   for (const tarea of lista) {
-    tarea.adjuntos = adjuntosDeTarea(almacen, tarea.id);
+    tarea.adjuntos = await adjuntosDeTarea(almacen, tarea.id);
   }
 
   if (!esDocente && estado) {
@@ -175,15 +175,16 @@ export function listarTareas({ almacen }, usuario, { area, estado, q } = {}) {
 }
 
 /** Adjuntos de una tarea, con los datos del archivo listos para descargar. */
-function adjuntosDeTarea(almacen, tareaId) {
-  return almacen.todos(
+async function adjuntosDeTarea(almacen, tareaId) {
+  const filas = await almacen.todos(
     `SELECT a.id, a.titulo, a.tipo, f.nombre_original, f.mime, f.tamano
        FROM tarea_adjuntos a
        JOIN archivos f ON f.id = a.archivo_id
       WHERE a.tarea_id = ?
       ORDER BY a.creado_en`,
     tareaId,
-  ).map((f) => ({
+  );
+  return filas.map((f) => ({
     id: f.id,
     titulo: f.titulo,
     tipo: f.tipo,
@@ -194,21 +195,21 @@ function adjuntosDeTarea(almacen, tareaId) {
 }
 
 /** Tarea completa con adjuntos y, para el estudiante, su propia entrega. */
-export function obtenerTarea({ almacen }, usuario, id) {
-  publicarProgramadas({ almacen });
+export async function obtenerTarea({ almacen }, usuario, id) {
+  await publicarProgramadas({ almacen });
 
   const esDocente = usuario.rol === 'docente';
 
   const fila = esDocente
-    ? almacen.uno(`${sqlTarea(true)} WHERE t.id = ?`, id)
-    : almacen.uno(`${sqlTarea(false)} WHERE t.id = ?`, usuario.id, id);
+    ? await almacen.uno(`${sqlTarea(true)} WHERE t.id = ?`, id)
+    : await almacen.uno(`${sqlTarea(false)} WHERE t.id = ?`, usuario.id, id);
   if (!fila) throw new ErrorHttp(404, 'La tarea no existe.');
   if (!fila.publicada && usuario.rol !== 'docente') {
     throw new ErrorHttp(403, 'Esa tarea no está publicada.');
   }
 
   const tarea = mapTarea(fila, usuario);
-  tarea.adjuntos = adjuntosDeTarea(almacen, id);
+  tarea.adjuntos = await adjuntosDeTarea(almacen, id);
 
   return tarea;
 }
@@ -269,7 +270,7 @@ function datosTarea(datos, fila = null) {
   };
 }
 
-export function crearTarea({ almacen }, usuario, datos) {
+export async function crearTarea({ almacen }, usuario, datos) {
   exigirDocente(usuario);
 
   const campos = datosTarea(datos);
@@ -282,7 +283,7 @@ export function crearTarea({ almacen }, usuario, datos) {
   const momento = ahora();
   const publicada = quierePublicar && !programada;
 
-  almacen.ejecutar(
+  await almacen.ejecutar(
     `INSERT INTO tareas
        (id, titulo, area, instrucciones, indicaciones, publicada, publicada_en,
         fecha_publicacion, limite_en, puntaje_maximo, permite_reapertura,
@@ -295,7 +296,7 @@ export function crearTarea({ almacen }, usuario, datos) {
   );
 
   if (publicada) {
-    notificarEstudiantes({ almacen }, {
+    await notificarEstudiantes({ almacen }, {
       tipo: TIPOS.TAREA_NUEVA,
       titulo: `Nueva tarea publicada: «${campos.titulo}»`,
       detalle: campos.limite_en ? `Fecha límite: ${campos.limite_en}.` : 'Sin fecha límite.',
@@ -303,18 +304,18 @@ export function crearTarea({ almacen }, usuario, datos) {
     });
   }
 
-  return obtenerTarea({ almacen }, usuario, id);
+  return await obtenerTarea({ almacen }, usuario, id);
 }
 
-export function actualizarTarea({ almacen }, usuario, id, datos) {
+export async function actualizarTarea({ almacen }, usuario, id, datos) {
   exigirDocente(usuario);
 
-  const fila = almacen.uno('SELECT * FROM tareas WHERE id = ?', id);
+  const fila = await almacen.uno('SELECT * FROM tareas WHERE id = ?', id);
   if (!fila) throw new ErrorHttp(404, 'La tarea no existe.');
 
   const campos = datosTarea(datos, fila);
 
-  almacen.ejecutar(
+  await almacen.ejecutar(
     `UPDATE tareas
         SET titulo = ?, area = ?, instrucciones = ?, indicaciones = ?,
             fecha_publicacion = ?, limite_en = ?, puntaje_maximo = ?,
@@ -326,29 +327,29 @@ export function actualizarTarea({ almacen }, usuario, id, datos) {
   );
 
   if (datos.publicada !== undefined) {
-    cambiarPublicacion({ almacen }, usuario, id, booleano(datos.publicada, false));
+    await cambiarPublicacion({ almacen }, usuario, id, booleano(datos.publicada, false));
   }
 
-  return obtenerTarea({ almacen }, usuario, id);
+  return await obtenerTarea({ almacen }, usuario, id);
 }
 
 /** Publica o despublica una tarea. */
-export function cambiarPublicacion({ almacen }, usuario, id, publicada) {
+export async function cambiarPublicacion({ almacen }, usuario, id, publicada) {
   exigirDocente(usuario);
 
-  const fila = almacen.uno('SELECT * FROM tareas WHERE id = ?', id);
+  const fila = await almacen.uno('SELECT * FROM tareas WHERE id = ?', id);
   if (!fila) throw new ErrorHttp(404, 'La tarea no existe.');
 
   const nuevo = publicada ? 1 : 0;
-  if (nuevo === fila.publicada) return obtenerTarea({ almacen }, usuario, id);
+  if (nuevo === fila.publicada) return await obtenerTarea({ almacen }, usuario, id);
 
-  almacen.ejecutar(
+  await almacen.ejecutar(
     'UPDATE tareas SET publicada = ?, publicada_en = ?, actualizado_en = ? WHERE id = ?',
     nuevo, publicada ? ahora() : null, ahora(), id,
   );
 
   if (publicada) {
-    notificarEstudiantes({ almacen }, {
+    await notificarEstudiantes({ almacen }, {
       tipo: TIPOS.TAREA_NUEVA,
       titulo: `Nueva tarea publicada: «${fila.titulo}»`,
       detalle: fila.limite_en ? `Fecha límite: ${fila.limite_en}.` : 'Sin fecha límite.',
@@ -356,20 +357,20 @@ export function cambiarPublicacion({ almacen }, usuario, id, publicada) {
     });
   }
 
-  return obtenerTarea({ almacen }, usuario, id);
+  return await obtenerTarea({ almacen }, usuario, id);
 }
 
 /** Elimina la tarea, sus adjuntos, sus entregas y los archivos de todos ellos. */
 export async function eliminarTarea({ almacen }, usuario, id) {
   exigirDocente(usuario);
 
-  const fila = almacen.uno('SELECT id FROM tareas WHERE id = ?', id);
+  const fila = await almacen.uno('SELECT id FROM tareas WHERE id = ?', id);
   if (!fila) throw new ErrorHttp(404, 'La tarea no existe.');
 
-  const adjuntos = almacen.todos('SELECT archivo_id FROM tarea_adjuntos WHERE tarea_id = ?', id);
-  const entregas = almacen.todos('SELECT archivo_id FROM entregas WHERE tarea_id = ?', id);
+  const adjuntos = await almacen.todos('SELECT archivo_id FROM tarea_adjuntos WHERE tarea_id = ?', id);
+  const entregas = await almacen.todos('SELECT archivo_id FROM entregas WHERE tarea_id = ?', id);
 
-  almacen.ejecutar('DELETE FROM tareas WHERE id = ?', id);
+  await almacen.ejecutar('DELETE FROM tareas WHERE id = ?', id);
 
   for (const adjunto of adjuntos) await borrarArchivo(almacen, adjunto.archivo_id);
   for (const entrega of entregas) await borrarArchivo(almacen, entrega.archivo_id);
@@ -382,7 +383,7 @@ export async function eliminarTarea({ almacen }, usuario, id) {
 export async function agregarAdjunto({ almacen, config }, usuario, tareaId, archivo, datos = {}) {
   exigirDocente(usuario);
 
-  const tarea = almacen.uno('SELECT * FROM tareas WHERE id = ?', tareaId);
+  const tarea = await almacen.uno('SELECT * FROM tareas WHERE id = ?', tareaId);
   if (!tarea) throw new ErrorHttp(404, 'La tarea no existe.');
   if (!archivo || !archivo.datos || !archivo.datos.length) {
     throw new ErrorHttp(400, 'Selecciona el archivo que quieres adjuntar.');
@@ -397,7 +398,7 @@ export async function agregarAdjunto({ almacen, config }, usuario, tareaId, arch
   });
 
   const id = nuevoId();
-  almacen.ejecutar(
+  await almacen.ejecutar(
     `INSERT INTO tarea_adjuntos (id, tarea_id, archivo_id, titulo, tipo, creado_en)
      VALUES (?, ?, ?, ?, ?, ?)`,
     id, tareaId, fila.id,
@@ -406,25 +407,25 @@ export async function agregarAdjunto({ almacen, config }, usuario, tareaId, arch
     ahora(),
   );
 
-  return obtenerTarea({ almacen }, usuario, tareaId);
+  return await obtenerTarea({ almacen }, usuario, tareaId);
 }
 
 export async function eliminarAdjunto({ almacen }, usuario, tareaId, adjuntoId) {
   exigirDocente(usuario);
 
-  const fila = almacen.uno(
+  const fila = await almacen.uno(
     'SELECT * FROM tarea_adjuntos WHERE id = ? AND tarea_id = ?',
     adjuntoId, tareaId,
   );
   if (!fila) throw new ErrorHttp(404, 'El adjunto no existe.');
 
-  almacen.ejecutar('DELETE FROM tarea_adjuntos WHERE id = ?', adjuntoId);
+  await almacen.ejecutar('DELETE FROM tarea_adjuntos WHERE id = ?', adjuntoId);
   await borrarArchivo(almacen, fila.archivo_id);
 }
 
 /** Descarga un adjunto si la tarea es visible para quien lo pide. */
 export async function archivoDeAdjunto({ almacen }, usuario, tareaId, adjuntoId) {
-  const fila = almacen.uno(
+  const fila = await almacen.uno(
     `SELECT t.publicada, f.*
        FROM tarea_adjuntos a
        JOIN tareas t ON t.id = a.tarea_id
@@ -439,8 +440,6 @@ export async function archivoDeAdjunto({ almacen }, usuario, tareaId, adjuntoId)
   }
 
   return {
-    datos: await leerArchivo(almacen, fila),
-    nombre: fila.nombre_original,
-    mime: fila.mime,
+    ...(await resolverArchivo(almacen, fila)),
   };
 }

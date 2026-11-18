@@ -36,7 +36,7 @@ function tokenDe(req) {
  * @returns {Promise<{servidor, almacen, ctx, cerrar}>}
  */
 export async function iniciarAplicacion({ config = CONFIG } = {}) {
-  const almacen = crearAlmacen({
+  const almacen = await crearAlmacen({
     rutaBd: config.rutaBd,
     rutaArchivos: config.rutaArchivos,
   });
@@ -47,7 +47,7 @@ export async function iniciarAplicacion({ config = CONFIG } = {}) {
   await asegurarUsuariosIniciales(ctx);
 
   const servidor = http.createServer(async (req, res) => {
-    aplicarCabecerasSeguridad(res);
+    aplicarCabecerasSeguridad(res, { produccion: process.env.NODE_ENV === 'production' });
     aplicarCors(req, res, config.origenes);
 
     if (req.method === 'OPTIONS') {
@@ -68,7 +68,7 @@ export async function iniciarAplicacion({ config = CONFIG } = {}) {
 
       if (acceso !== 'publico') {
         token = tokenDe(req);
-        usuario = usuarioPorToken(ctx, token);
+        usuario = await usuarioPorToken(ctx, token);
 
         if (!usuario) throw new ErrorHttp(401, 'Inicia sesión para continuar.');
 
@@ -92,7 +92,18 @@ export async function iniciarAplicacion({ config = CONFIG } = {}) {
       // El endpoint SSE mantiene la conexión abierta; no es JSON ni archivo.
       if (resultado && resultado.stream) return;
 
+      if (resultado && resultado.redirectTo) {
+        res.writeHead(302, { Location: resultado.redirectTo, 'Cache-Control': 'no-store' });
+        res.end();
+        return;
+      }
+
       if (resultado && resultado.archivo) {
+        if (resultado.archivo.redirectTo) {
+          res.writeHead(302, { Location: resultado.archivo.redirectTo, 'Cache-Control': 'no-store' });
+          res.end();
+          return;
+        }
         responderArchivo(res, resultado.archivo, { descarga: !resultado.inline });
         return;
       }

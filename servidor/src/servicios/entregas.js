@@ -15,7 +15,7 @@
 import { ErrorHttp } from '../lib/http.js';
 import { ahora } from '../bd/almacen.js';
 import { nuevoId } from '../lib/seguridad.js';
-import { guardarArchivo, leerArchivo, borrarArchivo, PERMITIDOS } from '../lib/archivos.js';
+import { guardarArchivo, resolverArchivo, borrarArchivo, PERMITIDOS } from '../lib/archivos.js';
 import {
   textoOpcional,
   numeroOpcionalEntre,
@@ -66,7 +66,7 @@ function mapEntrega(fila) {
 }
 
 /** Lista entregas con filtros. El estudiante queda limitado a las suyas. */
-export function listarEntregas({ almacen }, usuario, filtros = {}) {
+export async function listarEntregas({ almacen }, usuario, filtros = {}) {
   const condiciones = [];
   const params = [];
 
@@ -100,15 +100,16 @@ export function listarEntregas({ almacen }, usuario, filtros = {}) {
   }
 
   const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
-  return almacen.todos(
+  const filas = await almacen.todos(
     `${CONSULTA} ${where} ORDER BY e.entregada_en DESC`,
     ...params,
-  ).map(mapEntrega);
+  );
+  return filas.map(mapEntrega);
 }
 
 /** Una entrega concreta, solo si el usuario tiene derecho a verla. */
-export function obtenerEntrega({ almacen }, usuario, id) {
-  const fila = almacen.uno(`${CONSULTA} WHERE e.id = ?`, id);
+export async function obtenerEntrega({ almacen }, usuario, id) {
+  const fila = await almacen.uno(`${CONSULTA} WHERE e.id = ?`, id);
   if (!fila) throw new ErrorHttp(404, 'La entrega no existe.');
 
   if (usuario.rol !== 'docente' && fila.estudiante_id !== usuario.id) {
@@ -127,7 +128,7 @@ export async function entregarTarea({ almacen, config }, usuario, tareaId, archi
     throw new ErrorHttp(403, 'Solo un estudiante puede entregar una tarea.');
   }
 
-  const tarea = almacen.uno('SELECT * FROM tareas WHERE id = ?', tareaId);
+  const tarea = await almacen.uno('SELECT * FROM tareas WHERE id = ?', tareaId);
   if (!tarea) throw new ErrorHttp(404, 'La tarea no existe.');
   if (!tarea.publicada) throw new ErrorHttp(403, 'Esa tarea todavía no está publicada.');
 
@@ -135,7 +136,7 @@ export async function entregarTarea({ almacen, config }, usuario, tareaId, archi
     throw new ErrorHttp(400, 'Selecciona el archivo de tu entrega.');
   }
 
-  const existente = almacen.uno(
+  const existente = await almacen.uno(
     'SELECT * FROM entregas WHERE tarea_id = ? AND estudiante_id = ?',
     tareaId, usuario.id,
   );
@@ -162,7 +163,7 @@ export async function entregarTarea({ almacen, config }, usuario, tareaId, archi
   const comentario = textoOpcional(datos.comentario, 2000);
 
   if (existente) {
-    almacen.ejecutar(
+    await almacen.ejecutar(
       `UPDATE entregas
           SET archivo_id = ?, comentario = ?, estado = ?, calificacion = NULL,
               observaciones = '', evaluada_en = NULL, entregada_en = ?, actualizada_en = ?
@@ -171,7 +172,7 @@ export async function entregarTarea({ almacen, config }, usuario, tareaId, archi
     );
     await borrarArchivo(almacen, existente.archivo_id);
   } else {
-    almacen.ejecutar(
+    await almacen.ejecutar(
       `INSERT INTO entregas
          (id, tarea_id, estudiante_id, archivo_id, comentario, estado,
           calificacion, observaciones, entregada_en, actualizada_en)
@@ -180,7 +181,7 @@ export async function entregarTarea({ almacen, config }, usuario, tareaId, archi
     );
   }
 
-  crearNotificacion({ almacen }, {
+  await crearNotificacion({ almacen }, {
     usuarioId: tarea.docente_id,
     tipo: TIPOS.ENTREGA_REGISTRADA,
     titulo: `${usuario.nombre} entregó «${tarea.titulo}»`,
@@ -188,19 +189,19 @@ export async function entregarTarea({ almacen, config }, usuario, tareaId, archi
     tareaId,
   });
 
-  const guardada = almacen.uno(
+  const guardada = await almacen.uno(
     'SELECT id FROM entregas WHERE tarea_id = ? AND estudiante_id = ?',
     tareaId, usuario.id,
   );
 
-  return obtenerEntrega({ almacen }, usuario, guardada.id);
+  return await obtenerEntrega({ almacen }, usuario, guardada.id);
 }
 
 /** Calificación y retroalimentación (solo docente). */
-export function calificarEntrega({ almacen }, usuario, id, datos) {
+export async function calificarEntrega({ almacen }, usuario, id, datos) {
   exigirDocente(usuario);
 
-  const fila = almacen.uno(
+  const fila = await almacen.uno(
     `SELECT e.*, t.titulo AS tarea_titulo, t.puntaje_maximo
        FROM entregas e JOIN tareas t ON t.id = e.tarea_id
       WHERE e.id = ?`,
@@ -227,7 +228,7 @@ export function calificarEntrega({ almacen }, usuario, id, datos) {
     throw new ErrorHttp(400, `La nota no puede superar el puntaje máximo (${fila.puntaje_maximo}).`);
   }
 
-  almacen.ejecutar(
+  await almacen.ejecutar(
     `UPDATE entregas
         SET estado = ?, calificacion = ?, observaciones = ?, evaluada_en = ?, actualizada_en = ?
       WHERE id = ?`,
@@ -235,7 +236,7 @@ export function calificarEntrega({ almacen }, usuario, id, datos) {
   );
 
   if (estado === 'calificada') {
-    crearNotificacion({ almacen }, {
+    await crearNotificacion({ almacen }, {
       usuarioId: fila.estudiante_id,
       tipo: TIPOS.TAREA_CALIFICADA,
       titulo: `Tu tarea «${fila.tarea_titulo}» fue calificada`,
@@ -244,7 +245,7 @@ export function calificarEntrega({ almacen }, usuario, id, datos) {
       entregaId: id,
     });
   } else if (estado === 'en_revision') {
-    crearNotificacion({ almacen }, {
+    await crearNotificacion({ almacen }, {
       usuarioId: fila.estudiante_id,
       tipo: TIPOS.CORRECCION,
       titulo: `El docente pidió correcciones en «${fila.tarea_titulo}»`,
@@ -254,12 +255,12 @@ export function calificarEntrega({ almacen }, usuario, id, datos) {
     });
   }
 
-  return obtenerEntrega({ almacen }, usuario, id);
+  return await obtenerEntrega({ almacen }, usuario, id);
 }
 
 /** Archivo de una entrega: solo el dueño o un docente. */
 export async function archivoDeEntrega({ almacen }, usuario, id) {
-  const fila = almacen.uno(
+  const fila = await almacen.uno(
     `SELECT e.estudiante_id, f.*
        FROM entregas e
        JOIN archivos f ON f.id = e.archivo_id
@@ -273,9 +274,7 @@ export async function archivoDeEntrega({ almacen }, usuario, id) {
   }
 
   return {
-    datos: await leerArchivo(almacen, fila),
-    nombre: fila.nombre_original,
-    mime: fila.mime,
+    ...(await resolverArchivo(almacen, fila)),
   };
 }
 
@@ -284,7 +283,7 @@ export async function archivoDeEntrega({ almacen }, usuario, id) {
  * - Estudiante: solo las suyas.
  * - Docente: todas, con el nombre del estudiante.
  */
-export function listarCalificaciones({ almacen }, usuario, filtros = {}) {
+export async function listarCalificaciones({ almacen }, usuario, filtros = {}) {
   const condiciones = ["e.calificacion IS NOT NULL"];
   const params = [];
 
@@ -301,7 +300,7 @@ export function listarCalificaciones({ almacen }, usuario, filtros = {}) {
     params.push(areaObligatoria(filtros.area));
   }
 
-  const filas = almacen.todos(
+  const filas = await almacen.todos(
     `${CONSULTA} WHERE ${condiciones.join(' AND ')} ORDER BY e.evaluada_en DESC`,
     ...params,
   );

@@ -208,10 +208,16 @@ export function aplicarCors(req, res, origenes) {
   res.setHeader('Access-Control-Max-Age', '600');
 }
 
-export function aplicarCabecerasSeguridad(res) {
+export function aplicarCabecerasSeguridad(res, { produccion = false } = {}) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  if (produccion) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
 }
 
 export function responderJson(res, estado, datos) {

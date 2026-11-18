@@ -1,7 +1,7 @@
 /**
  * lib/archivos.js
  * ---------------
- * Validación y almacenamiento de archivos en disco.
+ * Validación y almacenamiento de archivos en R2 o en disco local.
  *
  * El tipo real se comprueba por los primeros bytes (número mágico) y no por
  * la extensión ni por el Content-Type declarado, que el cliente puede falsear.
@@ -14,6 +14,12 @@ import { join } from 'node:path';
 import { ErrorHttp } from './http.js';
 import { nuevoId } from './seguridad.js';
 import { ahora } from '../bd/almacen.js';
+import {
+  r2Configurado,
+  subirArchivoR2,
+  borrarArchivoR2,
+  urlPublicaR2,
+} from './r2.js';
 
 const TIPOS = [
   {
@@ -104,8 +110,18 @@ export async function guardarArchivo(almacen, {
 
   const id = nuevoId();
   const ruta = `${id}.${extension}`;
+  const usaR2 = r2Configurado();
 
-  await writeFile(join(almacen.rutaArchivos, ruta), datos);
+  let url = null;
+  if (usaR2) {
+    url = await subirArchivoR2(datos, {
+      key: ruta,
+      contentType: tipo.mime,
+      nombreOriginal,
+    });
+  } else {
+    await writeFile(join(almacen.rutaArchivos, ruta), datos);
+  }
 
   const fila = {
     id,
@@ -119,22 +135,56 @@ export async function guardarArchivo(almacen, {
     creado_en: ahora(),
   };
 
-  almacen.ejecutar(
+  try {
+    await almacen.ejecutar(
     `INSERT INTO archivos
        (id, nombre_original, mime, extension, tamano, sha256, ruta, subido_por, creado_en)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     fila.id, fila.nombre_original, fila.mime, fila.extension, fila.tamano,
     fila.sha256, fila.ruta, fila.subido_por, fila.creado_en,
-  );
+    );
+  } catch (error) {
+    // No dejamos un objeto huérfano si falla el registro en la base de datos.
+    if (usaR2) {
+      await borrarArchivoR2(ruta);
+    } else {
+      try {
+        await unlink(join(almacen.rutaArchivos, ruta));
+      } catch {
+        // No estaba el archivo local.
+      }
+    }
+    throw error;
+  }
 
-  return fila;
+  return url ? { ...fila, url } : fila;
 }
 
-/** Lee el binario de un archivo registrado. */
-export async function leerArchivo(almacen, fila) {
+/**
+ * Resuelve un archivo: redirección pública si está en R2, o binario si está local.
+ * @returns {Promise<{redirectTo:string, nombre:string, mime:string, tamano:number}|{datos:Buffer, nombre:string, mime:string, tamano:number}>}
+ */
+export async function resolverArchivo(almacen, fila) {
   if (!fila) throw new ErrorHttp(404, 'El archivo no existe.');
+
+  if (r2Configurado()) {
+    const redirectTo = urlPublicaR2(fila.ruta);
+    return {
+      redirectTo,
+      nombre: fila.nombre_original,
+      mime: fila.mime,
+      tamano: fila.tamano,
+    };
+  }
+
   try {
-    return await readFile(join(almacen.rutaArchivos, fila.ruta));
+    const datos = await readFile(join(almacen.rutaArchivos, fila.ruta));
+    return {
+      datos,
+      nombre: fila.nombre_original,
+      mime: fila.mime,
+      tamano: fila.tamano,
+    };
   } catch {
     throw new ErrorHttp(404, 'El archivo ya no está disponible en el servidor.');
   }
@@ -142,10 +192,14 @@ export async function leerArchivo(almacen, fila) {
 
 /** Elimina un archivo del disco y de la base de datos. */
 export async function borrarArchivo(almacen, archivoId) {
-  const fila = almacen.uno('SELECT * FROM archivos WHERE id = ?', archivoId);
+  const fila = await almacen.uno('SELECT * FROM archivos WHERE id = ?', archivoId);
   if (!fila) return;
 
-  almacen.ejecutar('DELETE FROM archivos WHERE id = ?', archivoId);
+  await almacen.ejecutar('DELETE FROM archivos WHERE id = ?', archivoId);
+  if (r2Configurado()) {
+    await borrarArchivoR2(fila.ruta);
+    return;
+  }
   try {
     await unlink(join(almacen.rutaArchivos, fila.ruta));
   } catch {

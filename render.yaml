@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: biblioteca-virtual-puno-api
+    runtime: node
+    rootDir: servidor
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/salud
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PUERTO
+        value: '10000'
+      - key: HOST
+        value: 0.0.0.0
+      - key: TAMANO_MAXIMO_MB
+        value: '1024'
+      - key: DURACION_SESION_HORAS
+        value: '12'
+      # En el dashboard de Render: https://deymusprueba12-creator.github.io
+      - key: ORIGENES_PERMITIDOS
+        sync: false
+      # En el dashboard de Render: libsql://... (no pongas el token en Git)
+      - key: TURSO_DATABASE_URL
+        sync: false
+      # Token personal de Turso. Nunca subirlo al repositorio.
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      # Cloudflare R2 para archivos. Déjalas vacías si usarás disco (desarrollo).
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: R2_PUBLIC_BASE_URL
+        sync: false
+      # Credenciales iniciales. Se usan solo si la tabla usuarios está vacía.
+      - key: DOCENTE_USUARIO
+        sync: false
+      - key: DOCENTE_PASSWORD
+        sync: false
+      - key: DOCENTE_NOMBRE
+        sync: false
+      - key: ESTUDIANTE_USUARIO
+        sync: false
+      - key: ESTUDIANTE_PASSWORD
+        sync: false
+      - key: ESTUDIANTE_NOMBRE
+        sync: false
