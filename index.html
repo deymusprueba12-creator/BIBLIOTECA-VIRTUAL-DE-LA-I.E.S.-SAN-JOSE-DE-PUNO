@@ -4,9 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#4f46e5">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-mobile-web-app-title" content="Biblio San José">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="description" content="BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO: biblioteca digital para docentes y estudiantes con libros, tareas, anuncios, fotos y museos virtuales.">
 <title>BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%234f46e5'/><text x='32' y='46' font-size='32' font-family='Arial' font-weight='bold' fill='%23ffffff' text-anchor='middle'>H</text></svg>">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -14,6 +18,8 @@
 <noscript>
   <div class="noscript">Esta aplicaci&oacute;n necesita JavaScript activado para funcionar.</div>
 </noscript>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:* http://192.168.1.38:* https:; frame-src blob: https:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<a class="skip-link" href="#content">Saltar al contenido principal</a>
 
 <!-- ============================================================
      PANTALLA DE INICIO DE SESI&Oacute;N &Uacute;NICA
@@ -28,13 +34,13 @@
       <p class="login-sub">Tu biblioteca y aula digital</p>
     </div>
 
-    <div class="login-roles" role="tablist" aria-label="Selecciona tu rol">
-      <button type="button" class="login-rol activo" id="rolDocente" role="tab"
-              aria-selected="true" aria-controls="loginForm" data-login-rol="docente">
+    <div class="login-roles" role="group" aria-label="Selecciona tu rol">
+      <button type="button" class="login-rol activo" id="rolDocente"
+              aria-pressed="true" data-login-rol="docente">
         <span aria-hidden="true">&#128104;&#8205;&#127979;</span> Docente
       </button>
-      <button type="button" class="login-rol" id="rolEstudiante" role="tab"
-              aria-selected="false" aria-controls="loginForm" data-login-rol="estudiante">
+      <button type="button" class="login-rol" id="rolEstudiante"
+              aria-pressed="false" data-login-rol="estudiante">
         <span aria-hidden="true">&#127891;</span> Estudiante
       </button>
     </div>
@@ -205,7 +211,7 @@
       </div>
     </header>
 
-    <main class="content" id="content">
+    <main class="content" id="content" tabindex="-1">
 
       <!-- ====== INICIO ====== -->
       <section class="seccion activa" id="sec-inicio">
@@ -381,7 +387,7 @@
                 <span class="campo-label">Material adjunto (opcional)</span>
                 <input type="file" id="tareaAdjuntos" class="input" multiple
                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png">
-                <small class="campo-ayuda">Se adjunta al guardar. M&aacute;ximo <span id="chipMaxTarea">25</span> MB por archivo.</small>
+                <small class="campo-ayuda">Se adjunta al guardar. M&aacute;ximo <span id="chipMaxTarea">1 GB</span> por archivo.</small>
                 <ul class="archivos-seleccionados" id="tareaAdjuntosLista"></ul>
               </div>
             </div>
@@ -779,7 +785,7 @@
         <span class="campo-label">Archivo de tu entrega <b class="req">*</b></span>
         <input type="file" id="entregaArchivo" class="input"
                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png">
-        <small class="campo-ayuda">PDF, DOC, DOCX, JPG, JPEG o PNG. M&aacute;ximo <span id="entregaMaxMb">25</span> MB.</small>
+        <small class="campo-ayuda">PDF, DOC, DOCX, JPG, JPEG o PNG. M&aacute;ximo <span id="entregaMaxMb">1 GB</span>.</small>
       </label>
       <label class="campo" for="entregaComentario">
         <span class="campo-label">Comentario para el docente</span>
@@ -797,17 +803,16 @@
 <!-- Notificaciones -->
 <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
 
-<!-- Socket.IO es opcional: script.js funciona aunque el CDN o el backend no estén disponibles. -->
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<!-- Configuración del API: URL pública del servidor (nunca credenciales). -->
-<script src="config.js"></script>
-<!-- Lector de PDF copiado al proyecto: sin CDN ni conexión obligatoria. -->
-<script src="vendor/pdfjs/pdf.min.js"></script>
-<script src="js/api.js"></script>
-<script src="js/clasificador.js"></script>
-<script src="js/pdf-texto.js"></script>
-<script src="js/biblioteca-ui.js"></script>
-<script src="js/tareas-ui.js"></script>
-<script src="script.js"></script>
+<!-- No se carga código remoto: todas las bibliotecas están copiadas localmente. -->
+  <!-- Configuración del API: URL publica del servidor (nunca credenciales). -->
+  <script src="config.js?v=2"></script>
+  <!-- Lector de PDF copiado al proyecto: sin CDN ni conexión obligatoria. -->
+  <script src="vendor/pdfjs/pdf.min.js?v=2"></script>
+  <script src="js/api.js?v=2"></script>
+  <script src="js/clasificador.js?v=2"></script>
+  <script src="js/pdf-texto.js?v=2"></script>
+  <script src="js/biblioteca-ui.js?v=2"></script>
+  <script src="js/tareas-ui.js?v=2"></script>
+  <script src="script.js?v=2"></script>
 </body>
 </html>
