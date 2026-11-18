@@ -1,16 +1,5 @@
-/* Integración opcional con el backend en tiempo real.
-   Si Socket.IO no está disponible, la aplicación sigue funcionando. */
-(function () {
-  var URL_BACKEND = 'https://hemeroteca-backend.onrender.com';
-  if (typeof io !== 'function') return;
-  try {
-    var socket = io(URL_BACKEND);
-    socket.on('nuevo-libro', function (libro) {
-      console.log('Nuevo libro recibido en tiempo real:', libro);
-      alert('El docente acaba de subir el libro: ' + libro.titulo + '!');
-    });
-  } catch (e) { /* backend no disponible */ }
-})();
+/* La integración en tiempo real usa EventSource contra /api/eventos en script.js.
+   No hay dependencias remotas ni alertas bloqueantes. */
 
 /* =====================================================================
    BIBLIOTECA VIRTUAL DE LA I.E.S. SAN JOSÉ DE PUNO — Lógica de la aplicación
@@ -22,8 +11,17 @@
      · localStorage -> anuncios globales y por área, fotos, museos y tema.
    Los permisos se validan en el servidor; ocultar botones aquí es solo UX.
    ===================================================================== */
+// ==========================================
+// CONFIGURACIÓN INTELIGENTE DE LA API
+// ==========================================
+const esLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_URL = esLocal 
+    ? 'http://localhost:3210' 
+    : 'https://hemeroteca-backend.onrender.com';
+// ==========================================
 
-'use strict';
+'use strict';S
+
 
 /* =====================================================================
    1. CONFIGURACIÓN
@@ -618,8 +616,8 @@ function actualizarRolLogin(rol) {
   $$('.login-rol').forEach(function (boton) {
     var activo = boton.getAttribute('data-login-rol') === rolLoginActual;
     boton.classList.toggle('activo', activo);
-    boton.setAttribute('aria-selected', activo ? 'true' : 'false');
-    boton.setAttribute('tabindex', activo ? '0' : '-1');
+    boton.setAttribute('aria-pressed', activo ? 'true' : 'false');
+    boton.setAttribute('tabindex', '0');
   });
   var nota = $('#loginRolNota');
   if (nota) {
@@ -819,7 +817,8 @@ function configurarLogin() {
 /** Diálogo reutilizable que devuelve una promesa */
 function dialogo(opciones) {
   var modal = $('#modalConfirmar');
-  var p = new Promise(function (resolver) { dialogo._resolver = resolver; });
+  var promesa = Promise.withResolvers();
+  dialogo._resolver = promesa.resolve;
   $('#confirmIcono').textContent = opciones.icono || '⚠️';
   $('#confirmTitulo').textContent = opciones.titulo || 'Confirmar';
   $('#confirmTexto').textContent = opciones.texto || '';
@@ -864,7 +863,10 @@ function irA(seccion) {
   if (destino) destino.classList.add('activa');
 
   $$('.nav-item').forEach(function (b) {
-    b.classList.toggle('activo', b.getAttribute('data-seccion') === seccion);
+    var esActivo = b.getAttribute('data-seccion') === seccion;
+    b.classList.toggle('activo', esActivo);
+    if (esActivo) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
   });
 
   var info = SECCIONES[seccion];
@@ -2781,6 +2783,16 @@ function iniciar() {
     try { localStorage.removeItem(CLAVES.sesion); } catch (e) { /* sin localStorage */ }
     mostrarLogin('');
   }
+}
+
+/* Registro del Service Worker para el modo sin conexión.
+   Solo se activa en entornos compatibles (localhost o HTTPS). */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function (error) {
+      console.warn('No se pudo registrar el modo sin conexión:', error);
+    });
+  });
 }
 
 if (document.readyState === 'loading') {
