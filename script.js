@@ -11,16 +11,17 @@
      · localStorage -> anuncios globales y por área, fotos, museos y tema.
    Los permisos se validan en el servidor; ocultar botones aquí es solo UX.
    ===================================================================== */
+
+'use strict';
+
 // ==========================================
 // CONFIGURACIÓN INTELIGENTE DE LA API
 // ==========================================
 const esLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_URL = esLocal 
-    ? 'http://localhost:3210' 
+const API_URL = esLocal
+    ? 'http://localhost:3210'
     : 'https://hemeroteca-backend.onrender.com';
 // ==========================================
-
-'use strict';S
 
 
 /* =====================================================================
