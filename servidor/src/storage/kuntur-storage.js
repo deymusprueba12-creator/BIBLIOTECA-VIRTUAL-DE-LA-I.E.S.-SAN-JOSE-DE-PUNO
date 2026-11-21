@@ -21,7 +21,7 @@ export class KunturStorageError extends Error {
 }
 
 function nombreSeguro(value) {
-  const nombre = String(value || 'archivo').replace(/[\\/\\0-\\x1f\\x7f]/g, '_').trim();
+  const nombre = String(value || 'archivo').replaceAll('/', '_').replaceAll('\\', '_').replace(/[\x00-\x1f\x7f]/g, '_').trim();
   return (nombre || 'archivo').slice(0, 255);
 }
 
@@ -99,7 +99,7 @@ export class KunturStorage {
         const info = await stat(objeto);
         if (info.isFile()) total += info.size;
       } catch (error) {
-        if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error;
+        if (error.code !== 'ENOENT') throw error;
       }
     }
     return total;
@@ -130,7 +130,7 @@ export class KunturStorage {
         ownerId: ownerId == null ? null : String(ownerId).slice(0, 128),
         createdAt: new Date().toISOString(),
         status: 'active',
-        storageKey: relative(this.#root, rutas.objeto).split('\\\\').join('/'),
+        storageKey: relative(this.#root, rutas.objeto).replaceAll('\\', '/'),
       };
 
       await mkdir(dirname(rutas.objeto), { recursive: true });
@@ -190,7 +190,7 @@ export class KunturStorage {
         const meta = JSON.parse(await readFile(ruta, 'utf8'));
         if (meta.status === 'active') resultado.push(meta);
       } catch (error) {
-        if (!(error instanceof SyntaxError)) throw error;
+        throw error;
       }
     }
     return resultado.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
