@@ -2,7 +2,7 @@
 
 ## Configuración acordada
 
-- Capacidad lógica inicial: **100 GB** (107 374 182 400 bytes).
+- Capacidad lógica inicial: **100 GB decimales** (100 000 000 000 bytes).
 - Servidor principal: VPS con disco persistente.
 - Respaldo secundario: agente automático en Windows 11.
 - Alcance final: libros, fotos, museos, tareas, entregas, usuarios, notas y registros.
@@ -12,7 +12,7 @@
 
 Esta versión incorpora un motor aislado de almacenamiento local persistente:
 - estructura de objetos y metadatos particionada por UUID;
-- cuota configurable (100 GiB por defecto);
+- cuota configurable (100 GB decimales por defecto);
 - escritura temporal y publicación mediante renombrado atómico;
 - SHA-256 calculado al guardar y verificado al recuperar;
 - listado, metadatos y eliminación lógica;
