@@ -9,7 +9,7 @@ import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 
-const CUOTA_PREDETERMINADA = 100 * 1024 ** 3;
+const CUOTA_PREDETERMINADA = 100_000_000_000; // 100 GB decimales
 const ID_VALIDO = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export class KunturStorageError extends Error {
